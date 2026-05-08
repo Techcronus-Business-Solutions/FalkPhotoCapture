@@ -1,13 +1,11 @@
 export const COLORS = {
-  primary: '#02204A',
+  primary: '#032548',
   white: '#FFFFFF',
-  background: '#F5F7FA',
-  border: '#E0E5EC',
+  border: '#ECECEC',
   pending: '#F59E0B',
-  uploaded: '#10B981',
-  failed: '#EF4444',
+  uploaded: '#1A9E5A',
+  failed: '#E30235',
   greyText: '#6B7280',
-  inputBackground: '#F0F2F5',
   black: '#000000',
   overlay: 'rgba(0,0,0,0.5)',
 } as const;

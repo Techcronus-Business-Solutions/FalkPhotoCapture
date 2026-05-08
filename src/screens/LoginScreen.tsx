@@ -14,7 +14,7 @@ import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
 import { COLORS } from '../assets/constants';
 import { wp } from '../utils/responsive';
-import { authService } from '../services/authService';
+import authService from '../services/authService';
 import { useAuthStore } from '../store/authStore';
 import { FontSize } from '../assets/constants';
 import AppLogo from '../assets/images/logo-blue.svg';

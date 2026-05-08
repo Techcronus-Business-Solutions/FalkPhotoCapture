@@ -8,8 +8,8 @@
 
 
          <!-- Fully opaque nav bar -->
-    <item name="android:navigationBarColor">#02204A</item>
-    <item name="android:statusBarColor">#02204A</item>
+    <item name="android:navigationBarColor">#032548</item>
+    <item name="android:statusBarColor">#032548</item>
     <item name="android:windowDrawsSystemBarBackgrounds">true</item>
 
     <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
