@@ -8,6 +8,7 @@ import {
   type TextInput as RNTextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import NetInfo from '@react-native-community/netinfo';
 import Toast from 'react-native-toast-message';
 import CustomText from '../components/CustomText';
 import CustomInput from '../components/CustomInput';
@@ -37,10 +38,26 @@ const LoginScreen: React.FC = () => {
       });
       return;
     }
+
+    const state = await NetInfo.fetch();
+    if (!state.isConnected) {
+      Toast.show({
+        type: 'error',
+        text1: 'No Internet',
+        text2: 'Please check your internet connection.',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       const result = await authService.login({ username, password });
       await login({ username: result.username, token: result.token });
+      Toast.show({
+        type: 'success',
+        text1: 'Login Successful',
+        text2: result.message || 'You are now logged in.',
+      });
     } catch (err: unknown) {
       Toast.show({
         type: 'error',

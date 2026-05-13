@@ -30,13 +30,17 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     const init = async () => {
-      await new Promise<void>(resolve => setTimeout(resolve, 2000));
-      await BootSplash.hide({ fade: true });
-      setIsReady(true);
+      try {
+        await hydrate();
+      } finally {
+        await new Promise<void>(resolve => setTimeout(resolve, 2000));
+        await BootSplash.hide({ fade: true });
+        setIsReady(true);
+      }
     };
 
     init();
-  }, []);
+  }, [hydrate]);
 
   return (
     <GestureHandlerRootView style={styles.root}>
