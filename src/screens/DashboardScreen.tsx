@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -42,13 +42,31 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       });
       return;
     }
-    await syncShipments();
-    Toast.show({
-      type: 'success',
-      text1: 'Synced',
-      text2: 'Shipments are up to date.',
-    });
+
+    try {
+      await syncShipments();
+      Toast.show({
+        type: 'success',
+        text1: 'Synced',
+        text2: 'Shipments are up to date.',
+      });
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Sync failed',
+        text2:
+          error instanceof Error
+            ? error.message
+            : 'Unable to load shipments. Please try again.',
+      });
+    }
   }, [isConnected, syncShipments]);
+
+  useEffect(() => {
+    syncShipments().catch(() => {
+      /* ignore initial fetch errors; user can pull to refresh */
+    });
+  }, [syncShipments]);
 
   const handleLogout = useCallback(async () => {
     setLogoutVisible(false);
@@ -114,7 +132,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         keyExtractor={keyExtractor}
         contentContainerStyle={[
           styles.list,
-          { paddingBottom: insets.bottom + wp(2) }, // vertical safe area → hp
+          { paddingBottom: insets.bottom + wp(2) + wp(14) }, // vertical safe area + bottom bar height → hp
         ]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={

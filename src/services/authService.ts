@@ -1,5 +1,5 @@
-import Config from 'react-native-config';
 import { getAccessToken } from './AccessTokenProvider';
+import { API_ROUTES } from './ApiRoutes';
 
 export interface LoginCredentials {
   username: string;
@@ -14,10 +14,7 @@ export interface AuthResponse {
   message?: string;
 }
 
-const ENVIRONMENT = Config.ENVIRONMENT as string;
-const COMPANY_ID = Config.COMPANY_ID as string;
-
-const LOGIN_URL = `https://api.businesscentral.dynamics.com/v2.0/${ENVIRONMENT}/api/techcronus/falk/v2.0/companies(${COMPANY_ID})/driverLogin`;
+const LOGIN_URL = API_ROUTES.LOGIN;
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
@@ -50,11 +47,11 @@ export const authService = {
     let data: any;
     try {
       data = JSON.parse(responseText);
-    } catch (parseError) {
+    } catch {
       throw new Error('Unable to parse login response.');
     }
 
-    if (typeof data.id === 'number' && data.id <= 0) {
+    if (typeof data.isLogin === 'boolean' && !data.isLogin) {
       throw new Error(data.message || 'Incorrect credentials.');
     }
 
