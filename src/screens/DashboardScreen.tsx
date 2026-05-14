@@ -28,6 +28,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     searchQuery,
     isLoading,
     syncShipments,
+    syncPendingUploads,
     searchShipments,
   } = useShipmentStore();
   const logout = useAuthStore(state => state.logout);
@@ -45,11 +46,21 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
 
     try {
       await syncShipments();
-      Toast.show({
-        type: 'success',
-        text1: 'Synced',
-        text2: 'Shipments are up to date.',
-      });
+
+      try {
+        await syncPendingUploads();
+        Toast.show({
+          type: 'success',
+          text1: 'Synced',
+          text2: 'Shipments and pending uploads are up to date.',
+        });
+      } catch {
+        Toast.show({
+          type: 'success',
+          text1: 'Synced',
+          text2: 'Shipments are up to date.',
+        });
+      }
     } catch (error) {
       Toast.show({
         type: 'error',
@@ -60,7 +71,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
             : 'Unable to load shipments. Please try again.',
       });
     }
-  }, [isConnected, syncShipments]);
+  }, [isConnected, syncShipments, syncPendingUploads]);
 
   useEffect(() => {
     if (!isConnected) {
@@ -70,7 +81,11 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     syncShipments().catch(() => {
       /* ignore initial fetch errors; user can pull to refresh */
     });
-  }, [isConnected, syncShipments]);
+
+    syncPendingUploads().catch(() => {
+      /* ignore sync errors; user can pull to refresh */
+    });
+  }, [isConnected, syncShipments, syncPendingUploads]);
 
   const handleLogout = useCallback(async () => {
     setLogoutVisible(false);

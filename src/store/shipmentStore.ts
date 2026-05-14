@@ -9,6 +9,7 @@ interface ShipmentState {
   searchQuery: string;
   isLoading: boolean;
   syncShipments: () => Promise<void>;
+  syncPendingUploads: () => Promise<void>;
   searchShipments: (query: string) => void;
   persistShipments: () => Promise<void>;
   loadShipments: () => Promise<void>;
@@ -34,6 +35,47 @@ export const useShipmentStore = create<ShipmentState>((set, get) => ({
       await get().persistShipments();
     } catch (error) {
       set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  syncPendingUploads: async () => {
+    try {
+      const { uploadService } = await import('../services/uploadService');
+      const { syncedCount } = await uploadService.syncPendingUploads();
+
+      if (syncedCount > 0) {
+        const pendingUploadsStore = await import(
+          '../store/pendingUploadsStore'
+        ).then(m => m.usePendingUploadsStore);
+        const allPendingUploads = pendingUploadsStore
+          .getState()
+          .getAllPendingUploads();
+
+        const completedUploads = allPendingUploads.filter(
+          u => u.uploadStatus === 'completed',
+        );
+
+        const { shipments } = get();
+        const updatedShipments = shipments.map(s => {
+          const hasCompletedUploads = completedUploads.some(
+            u => u.shipmentNumber === s.bolNumber,
+          );
+          if (hasCompletedUploads) {
+            return { ...s, status: 'Uploaded' as const };
+          }
+          return s;
+        });
+
+        set({
+          shipments: updatedShipments,
+          filteredShipments: updatedShipments,
+        });
+        await get().persistShipments();
+
+        await pendingUploadsStore.getState().clearAll();
+      }
+    } catch (error) {
       throw error;
     }
   },

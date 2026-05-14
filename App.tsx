@@ -10,6 +10,7 @@ import SplashScreen from './src/screens/SplashScreen';
 import { useAuthStore } from './src/store/authStore';
 import { usePhotoStore } from './src/store/photoStore';
 import { useShipmentStore } from './src/store/shipmentStore';
+import { usePendingUploadsStore } from './src/store/pendingUploadsStore';
 import { COLORS } from './src/assets/constants';
 
 function App(): React.JSX.Element {
@@ -17,23 +18,19 @@ function App(): React.JSX.Element {
   const hydrate = useAuthStore(state => state.hydrate);
   const loadPhotos = usePhotoStore(state => state.loadPhotos);
   const loadShipments = useShipmentStore(state => state.loadShipments);
-
-  // useEffect(() => {
-  //   const init = async () => {
-  //     try {
-  //       await Promise.all([hydrate(), loadPhotos(), loadShipments()]);
-  //     } finally {
-  //       setIsReady(true);
-  //       await BootSplash.hide({ fade: true });
-  //     }
-  //   };
-  //   init();
-  // }, [hydrate, loadPhotos, loadShipments]);
+  const loadPendingUploads = usePendingUploadsStore(
+    state => state.loadPendingUploads,
+  );
 
   useEffect(() => {
     const init = async () => {
       try {
-        await Promise.all([hydrate(), loadPhotos(), loadShipments()]);
+        await Promise.all([
+          hydrate(),
+          loadPhotos(),
+          loadShipments(),
+          loadPendingUploads(),
+        ]);
       } finally {
         await new Promise<void>(resolve => setTimeout(resolve, 2000));
         await BootSplash.hide({ fade: true });
@@ -42,7 +39,7 @@ function App(): React.JSX.Element {
     };
 
     init();
-  }, [hydrate, loadPhotos, loadShipments]);
+  }, [hydrate, loadPhotos, loadShipments, loadPendingUploads]);
 
   return (
     <GestureHandlerRootView style={styles.root}>
