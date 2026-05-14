@@ -63,10 +63,14 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   }, [isConnected, syncShipments]);
 
   useEffect(() => {
+    if (!isConnected) {
+      return;
+    }
+
     syncShipments().catch(() => {
       /* ignore initial fetch errors; user can pull to refresh */
     });
-  }, [syncShipments]);
+  }, [isConnected, syncShipments]);
 
   const handleLogout = useCallback(async () => {
     setLogoutVisible(false);

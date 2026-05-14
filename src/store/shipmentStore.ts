@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Shipment, ShipmentStatus } from '../data/mockData';
 import { shipmentService } from '../services/shipmentService';
+import { storage } from '../utils/storage';
 
 interface ShipmentState {
   shipments: Shipment[];
@@ -9,6 +10,8 @@ interface ShipmentState {
   isLoading: boolean;
   syncShipments: () => Promise<void>;
   searchShipments: (query: string) => void;
+  persistShipments: () => Promise<void>;
+  loadShipments: () => Promise<void>;
   updateShipmentStatus: (
     id: string,
     status: ShipmentStatus,
@@ -28,9 +31,30 @@ export const useShipmentStore = create<ShipmentState>((set, get) => ({
       const shipments = await shipmentService.fetchShipments();
       set({ shipments, filteredShipments: shipments, isLoading: false });
       get().searchShipments(get().searchQuery);
+      await get().persistShipments();
     } catch (error) {
       set({ isLoading: false });
       throw error;
+    }
+  },
+
+  persistShipments: async () => {
+    const { shipments, searchQuery } = get();
+    await storage.setItem(storage.KEYS.SHIPMENTS, { shipments, searchQuery });
+  },
+
+  loadShipments: async () => {
+    const data = await storage.getItem<{
+      shipments: Shipment[];
+      searchQuery: string;
+    }>(storage.KEYS.SHIPMENTS);
+    if (data) {
+      set({
+        shipments: data.shipments,
+        filteredShipments: data.shipments,
+        searchQuery: data.searchQuery,
+      });
+      get().searchShipments(data.searchQuery);
     }
   },
 

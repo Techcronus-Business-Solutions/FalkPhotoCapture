@@ -8,7 +8,6 @@ import {
   type TextInput as RNTextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import NetInfo from '@react-native-community/netinfo';
 import Toast from 'react-native-toast-message';
 import CustomText from '../components/CustomText';
 import CustomInput from '../components/CustomInput';
@@ -17,6 +16,7 @@ import { COLORS } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import authService from '../services/authService';
 import { useAuthStore } from '../store/authStore';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { FontSize } from '../assets/constants';
 import AppLogo from '../assets/images/logo-blue.svg';
 import { FONTS } from '../assets/constants';
@@ -27,6 +27,7 @@ const LoginScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const passwordRef = useRef<RNTextInput>(null);
   const login = useAuthStore(state => state.login);
+  const { isConnected } = useNetworkStatus();
   const insets = useSafeAreaInsets();
 
   const handleLogin = useCallback(async () => {
@@ -39,8 +40,7 @@ const LoginScreen: React.FC = () => {
       return;
     }
 
-    const state = await NetInfo.fetch();
-    if (!state.isConnected) {
+    if (!isConnected) {
       Toast.show({
         type: 'error',
         text1: 'No Internet',
@@ -67,7 +67,7 @@ const LoginScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [username, password, login]);
+  }, [username, password, login, isConnected]);
 
   return (
     <View style={styles.container}>
