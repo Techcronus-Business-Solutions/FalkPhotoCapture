@@ -1,6 +1,6 @@
 import { getAccessToken } from './AccessTokenProvider';
 import { API_ROUTES } from './ApiRoutes';
-import type { Shipment } from '../data/mockData';
+import type { Shipment } from '../types/shipment';
 
 const SHIPMENTS_URL = API_ROUTES.SHIPMENTS;
 

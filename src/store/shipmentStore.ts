@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Shipment, ShipmentStatus } from '../data/mockData';
+import type { Shipment, ShipmentStatus } from '../types/shipment';
 import { shipmentService } from '../services/shipmentService';
 import { storage } from '../utils/storage';
 

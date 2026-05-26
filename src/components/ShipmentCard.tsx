@@ -4,7 +4,7 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import CustomText from './CustomText';
 import { COLORS, FONTS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
-import type { Shipment, ShipmentStatus } from '../data/mockData';
+import type { Shipment, ShipmentStatus } from '../types/shipment';
 
 const STATUS_COLORS: Record<ShipmentStatus, string> = {
   Pending: COLORS.pending,
