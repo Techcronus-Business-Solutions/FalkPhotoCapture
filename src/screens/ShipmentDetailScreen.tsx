@@ -1,10 +1,17 @@
-import React, { useCallback, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -14,6 +21,7 @@ import CustomText from '../components/CustomText';
 import CustomButton from '../components/CustomButton';
 import ImageCard from '../components/ImageCard';
 import DeleteImageModal from '../components/DeleteImageModal';
+import Loader from '../components/Loader';
 import { COLORS, FONTS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import { usePhotoStore, type PhotoItem } from '../store/photoStore';
@@ -21,12 +29,14 @@ import { useShipmentStore } from '../store/shipmentStore';
 import { useImagePicker } from '../hooks/useImagePicker';
 import { uploadService } from '../services/uploadService';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { usePendingUploadsStore } from '../store/pendingUploadsStore';
 import type {
   ShipmentDetailNavigationProp,
   ShipmentDetailRouteProp,
 } from '../navigation/types';
 
 const MAX_PHOTOS = 20;
+const EMPTY_PHOTOS: PhotoItem[] = [];
 
 const ShipmentDetailScreen: React.FC<{
   navigation: ShipmentDetailNavigationProp;
@@ -34,20 +44,68 @@ const ShipmentDetailScreen: React.FC<{
 }> = ({ navigation, route }) => {
   const { shipmentId, bolNumber } = route.params;
   const [uploading, setUploading] = useState(false);
+  const [selectingPhotos, setSelectingPhotos] = useState(false);
   const [deleteImageModalVisible, setDeleteImageModalVisible] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
   const { isConnected } = useNetworkStatus();
 
-  const { addPhoto, removePhoto, getPhotos, clearPhotos } = usePhotoStore();
+  const addPhoto = usePhotoStore(state => state.addPhoto);
+  const addPhotos = usePhotoStore(state => state.addPhotos);
+  const removePhoto = usePhotoStore(state => state.removePhoto);
+  const clearPhotos = usePhotoStore(state => state.clearPhotos);
+  const photosByShipment = usePhotoStore(state => state.photosByShipment);
+  const photos = useMemo(
+    () => photosByShipment[shipmentId] ?? EMPTY_PHOTOS,
+    [photosByShipment, shipmentId],
+  );
   const { updateShipmentStatus } = useShipmentStore();
   const { takePhoto, pickFromGallery } = useImagePicker();
+  const pendingUploadEntries = usePendingUploadsStore(
+    state => state.pendingUploads,
+  );
+  const pendingUploads = useMemo(
+    () =>
+      pendingUploadEntries.filter(
+        upload =>
+          upload.shipmentNumber === bolNumber &&
+          upload.uploadStatus === 'pending',
+      ),
+    [pendingUploadEntries, bolNumber],
+  );
+  const pendingPhotos = useMemo<PhotoItem[]>(
+    () =>
+      pendingUploads.map(upload => ({
+        id: `offline-${upload.id}`,
+        uri: `data:image/png;base64,${upload.base64Image}`,
+        fileName: upload.fileName,
+        pendingUploadId: upload.id,
+      })),
+    [pendingUploads],
+  );
 
-  const photos = getPhotos(shipmentId);
+  const displayedPhotos = useMemo(
+    () => [...pendingPhotos, ...photos],
+    [pendingPhotos, photos],
+  );
+
+  const photosCountRef = useRef(photos.length);
+
+  useEffect(() => {
+    photosCountRef.current = photos.length;
+  }, [photos.length]);
+
+  useEffect(() => {
+    return () => {
+      if (photosCountRef.current > 0) {
+        void clearPhotos(shipmentId);
+      }
+    };
+  }, [clearPhotos, shipmentId]);
 
   const handleAddPhoto = useCallback(
     async (source: 'camera' | 'gallery') => {
-      if (photos.length >= MAX_PHOTOS) {
+      if (displayedPhotos.length >= MAX_PHOTOS) {
         Toast.show({
           type: 'error',
           text1: 'Limit Reached',
@@ -55,13 +113,33 @@ const ShipmentDetailScreen: React.FC<{
         });
         return;
       }
-      const photo =
-        source === 'camera' ? await takePhoto() : await pickFromGallery();
-      if (photo) {
-        await addPhoto(shipmentId, photo);
+      try {
+        setSelectingPhotos(true);
+        if (source === 'camera') {
+          const photo = await takePhoto();
+          if (photo) {
+            await addPhoto(shipmentId, photo);
+          }
+        } else {
+          const selectedPhotos = await pickFromGallery(
+            MAX_PHOTOS - displayedPhotos.length,
+          );
+          if (selectedPhotos?.length) {
+            await addPhotos(shipmentId, selectedPhotos);
+          }
+        }
+      } finally {
+        setSelectingPhotos(false);
       }
     },
-    [photos.length, takePhoto, pickFromGallery, addPhoto, shipmentId],
+    [
+      displayedPhotos.length,
+      takePhoto,
+      pickFromGallery,
+      addPhoto,
+      addPhotos,
+      shipmentId,
+    ],
   );
 
   const handleRemove = useCallback((photoId: string) => {
@@ -71,14 +149,21 @@ const ShipmentDetailScreen: React.FC<{
 
   const handleConfirmDelete = useCallback(async () => {
     if (selectedPhotoId) {
-      await removePhoto(shipmentId, selectedPhotoId);
+      if (selectedPhotoId.startsWith('offline-')) {
+        const pendingUploadId = selectedPhotoId.replace('offline-', '');
+        await usePendingUploadsStore
+          .getState()
+          .removePendingUpload(pendingUploadId);
+      } else {
+        await removePhoto(shipmentId, selectedPhotoId);
+      }
       setDeleteImageModalVisible(false);
       setSelectedPhotoId(null);
     }
-  }, [selectedPhotoId, removePhoto, shipmentId]);
+  }, [removePhoto, shipmentId, selectedPhotoId]);
 
   const handleUpload = useCallback(async () => {
-    if (!photos.length) {
+    if (!photos.length && !(pendingUploads?.length ?? 0)) {
       Toast.show({
         type: 'error',
         text1: 'No Photos',
@@ -91,21 +176,49 @@ const ShipmentDetailScreen: React.FC<{
       setUploading(true);
 
       if (isConnected) {
-        // Online: Upload to server
-        const result = await uploadService.uploadPhotos(
-          shipmentId,
-          bolNumber,
-          photos,
-        );
-        updateShipmentStatus(shipmentId, 'Uploaded', result.uploadedCount);
+        let totalUploadedCount = 0;
+
+        if (pendingUploads?.length) {
+          const pendingResult =
+            await uploadService.uploadPendingUploadsForShipment(
+              shipmentId,
+              bolNumber,
+              pendingUploads,
+            );
+          totalUploadedCount += pendingResult.uploadedCount;
+        }
+
+        if (photos.length) {
+          const result = await uploadService.uploadPhotos(
+            shipmentId,
+            bolNumber,
+            photos,
+          );
+          totalUploadedCount += result.uploadedCount;
+        }
+
+        if (totalUploadedCount > 0) {
+          updateShipmentStatus(shipmentId, 'Uploaded', totalUploadedCount);
+        }
+
         await clearPhotos(shipmentId);
         Toast.show({
           type: 'success',
           text1: 'Upload Successful',
-          text2: `${result.uploadedCount} photo(s) uploaded successfully.`,
+          text2: `${totalUploadedCount} photo(s) uploaded successfully.`,
         });
+        navigation.goBack();
       } else {
-        // Offline: Save to pending uploads
+        if (!photos.length) {
+          Toast.show({
+            type: 'info',
+            text1: 'Offline Mode',
+            text2:
+              'Images are already saved locally and will sync when online.',
+          });
+          return;
+        }
+
         await uploadService.uploadPhotosOffline(shipmentId, bolNumber, photos);
         updateShipmentStatus(shipmentId, 'Failed');
         await clearPhotos(shipmentId);
@@ -114,9 +227,8 @@ const ShipmentDetailScreen: React.FC<{
           text1: 'Offline Mode',
           text2: 'Images saved locally. Will sync when online.',
         });
+        navigation.goBack();
       }
-
-      navigation.goBack();
     } catch (err: unknown) {
       updateShipmentStatus(shipmentId, 'Failed');
       Toast.show({
@@ -129,6 +241,7 @@ const ShipmentDetailScreen: React.FC<{
     }
   }, [
     photos,
+    pendingUploads,
     shipmentId,
     bolNumber,
     isConnected,
@@ -249,12 +362,12 @@ const ShipmentDetailScreen: React.FC<{
             color={COLORS.black}
             style={styles.sectionTitle}
           >
-            Selected Photos ({photos.length}/{MAX_PHOTOS})
+            Selected Photos ({displayedPhotos.length}/{MAX_PHOTOS})
           </CustomText>
 
-          {photos.length > 0 ? (
+          {displayedPhotos.length > 0 ? (
             <FlatList
-              data={photos}
+              data={displayedPhotos}
               renderItem={renderPhoto}
               keyExtractor={item => item.id}
               numColumns={3}
@@ -291,7 +404,7 @@ const ShipmentDetailScreen: React.FC<{
           title="  Upload"
           onPress={handleUpload}
           loading={uploading}
-          disabled={!photos.length}
+          disabled={!displayedPhotos.length}
           style={styles.uploadBtn}
         />
       </ScrollView>
@@ -304,6 +417,19 @@ const ShipmentDetailScreen: React.FC<{
         }}
         onConfirm={handleConfirmDelete}
       />
+
+      <Modal visible={selectingPhotos} transparent animationType="fade">
+        <View style={styles.loaderOverlay}>
+          <Loader />
+          <CustomText
+            size={FontSize.normalText}
+            color={COLORS.white}
+            style={styles.loaderText}
+          >
+            Processing images...
+          </CustomText>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -355,6 +481,16 @@ const styles = StyleSheet.create({
   },
   uploadBtn: {
     marginTop: wp(4),
+  },
+  loaderOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loaderText: {
+    marginTop: wp(4),
+    fontFamily: FONTS.REGULAR,
   },
 });
 

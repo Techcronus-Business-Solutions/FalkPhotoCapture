@@ -5,6 +5,7 @@ import {
   usePendingUploadsStore,
   type PendingUpload,
 } from '../store/pendingUploadsStore';
+import RNFS from 'react-native-fs';
 
 export interface UploadResult {
   success: boolean;
@@ -65,16 +66,31 @@ export const uploadService = {
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
 
-        if (!photo.base64) {
+        // If base64 is missing (we don't persist base64 to storage), try to
+        // regenerate it from the stored file URI. This keeps uploads working
+        // after app restarts where persisted photos only contain metadata.
+        let base64Image = photo.base64;
+        if (!base64Image && photo.uri) {
+          try {
+            base64Image = await RNFS.readFile(photo.uri, 'base64');
+          } catch (err) {
+            throw new Error(`Image ${i + 1} could not be processed.`);
+          }
+        }
+
+        if (!base64Image) {
           throw new Error(`Image ${i + 1} could not be processed.`);
         }
 
-        const fileName = photo.fileName || `${shipmentNumber}-${i + 1}.jpg`;
+        const baseName = photo.fileName
+          ? photo.fileName.replace(/\.[^.]+$/, '')
+          : `${shipmentNumber}-${i + 1}`;
+        const fileName = `${baseName}.png`;
 
         attachments.push({
           postedShipmentNo: shipmentNumber,
           fileName,
-          base64Image: photo.base64,
+          base64Image,
         });
       }
 
@@ -106,17 +122,30 @@ export const uploadService = {
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
 
-        if (!photo.base64) {
+        // Ensure we have a base64 string to persist for offline uploads.
+        let base64Image = photo.base64;
+        if (!base64Image && photo.uri) {
+          try {
+            base64Image = await RNFS.readFile(photo.uri, 'base64');
+          } catch (err) {
+            throw new Error(`Image ${i + 1} could not be processed.`);
+          }
+        }
+
+        if (!base64Image) {
           throw new Error(`Image ${i + 1} could not be processed.`);
         }
 
-        const fileName = photo.fileName || `${shipmentNumber}-${i + 1}.jpg`;
+        const baseName = photo.fileName
+          ? photo.fileName.replace(/\.[^.]+$/, '')
+          : `${shipmentNumber}-${i + 1}`;
+        const fileName = `${baseName}.png`;
 
         pendingUploads.push({
           id: `${shipmentId}-${photo.id}`,
           shipmentNumber,
           fileName,
-          base64Image: photo.base64,
+          base64Image,
           uploadStatus: 'pending',
         });
       }
@@ -125,6 +154,34 @@ export const uploadService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  uploadPendingUploadsForShipment: async (
+    shipmentId: string,
+    shipmentNumber: string,
+    pendingUploads: PendingUpload[],
+  ): Promise<UploadResult> => {
+    if (!pendingUploads.length) {
+      throw new Error('No photo uploads available.');
+    }
+
+    const pendingUploadsStore = usePendingUploadsStore.getState();
+    const attachments: SalesAttachment[] = pendingUploads.map(upload => ({
+      postedShipmentNo: upload.shipmentNumber,
+      fileName: upload.fileName,
+      base64Image: upload.base64Image,
+    }));
+
+    await uploadImagesToServer(attachments);
+    await pendingUploadsStore.markUploadsAsCompleted(
+      pendingUploads.map(upload => upload.id),
+    );
+
+    return {
+      success: true,
+      shipmentId,
+      uploadedCount: pendingUploads.length,
+    };
   },
 
   syncPendingUploads: async (): Promise<{

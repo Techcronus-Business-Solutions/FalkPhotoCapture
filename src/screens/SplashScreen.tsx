@@ -8,7 +8,7 @@ import { FontSize } from '../assets/constants';
 const SplashScreen: React.FC = () => (
   <View style={styles.container}>
     <Image
-      source={require('../assets/images/splash_bg.webp')}
+      source={require('../assets/images/splash_bg.png')}
       resizeMode="cover"
       style={styles.backgroundImage}
     />
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   bottomContainer: {
     position: 'absolute',
     bottom: wp(8),
-    width: wp(100),
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
