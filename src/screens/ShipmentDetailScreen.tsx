@@ -20,6 +20,7 @@ import { usePhotoStore, type PhotoItem } from '../store/photoStore';
 import { useShipmentStore } from '../store/shipmentStore';
 import { useImagePicker } from '../hooks/useImagePicker';
 import { uploadService } from '../services/uploadService';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import type {
   ShipmentDetailNavigationProp,
   ShipmentDetailRouteProp,
@@ -36,8 +37,9 @@ const ShipmentDetailScreen: React.FC<{
   const [deleteImageModalVisible, setDeleteImageModalVisible] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
+  const { isConnected } = useNetworkStatus();
 
-  const { addPhoto, removePhoto, getPhotos } = usePhotoStore();
+  const { addPhoto, removePhoto, getPhotos, clearPhotos } = usePhotoStore();
   const { updateShipmentStatus } = useShipmentStore();
   const { takePhoto, pickFromGallery } = useImagePicker();
 
@@ -84,15 +86,36 @@ const ShipmentDetailScreen: React.FC<{
       });
       return;
     }
+
     try {
       setUploading(true);
-      const result = await uploadService.uploadPhotos(shipmentId, photos);
-      updateShipmentStatus(shipmentId, 'Uploaded', result.uploadedCount);
-      Toast.show({
-        type: 'success',
-        text1: 'Upload Successful',
-        text2: `${result.uploadedCount} photo(s) uploaded successfully.`,
-      });
+
+      if (isConnected) {
+        // Online: Upload to server
+        const result = await uploadService.uploadPhotos(
+          shipmentId,
+          bolNumber,
+          photos,
+        );
+        updateShipmentStatus(shipmentId, 'Uploaded', result.uploadedCount);
+        await clearPhotos(shipmentId);
+        Toast.show({
+          type: 'success',
+          text1: 'Upload Successful',
+          text2: `${result.uploadedCount} photo(s) uploaded successfully.`,
+        });
+      } else {
+        // Offline: Save to pending uploads
+        await uploadService.uploadPhotosOffline(shipmentId, bolNumber, photos);
+        updateShipmentStatus(shipmentId, 'Failed');
+        await clearPhotos(shipmentId);
+        Toast.show({
+          type: 'info',
+          text1: 'Offline Mode',
+          text2: 'Images saved locally. Will sync when online.',
+        });
+      }
+
       navigation.goBack();
     } catch (err: unknown) {
       updateShipmentStatus(shipmentId, 'Failed');
@@ -104,7 +127,15 @@ const ShipmentDetailScreen: React.FC<{
     } finally {
       setUploading(false);
     }
-  }, [photos, shipmentId, updateShipmentStatus, navigation]);
+  }, [
+    photos,
+    shipmentId,
+    bolNumber,
+    isConnected,
+    updateShipmentStatus,
+    navigation,
+    clearPhotos,
+  ]);
 
   const renderPhoto = useCallback(
     ({ item }: { item: PhotoItem }) => (
@@ -124,7 +155,7 @@ const ShipmentDetailScreen: React.FC<{
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: insets.bottom + wp(4) }, // vertical safe area → hp
+          { paddingBottom: insets.bottom + wp(4) },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -166,7 +197,7 @@ const ShipmentDetailScreen: React.FC<{
             >
               <Ionicons
                 name="camera-outline"
-                size={wp(10)} // icon size → rf
+                size={wp(10)}
                 color={COLORS.primary}
                 style={{ marginRight: wp(4) }}
               />
@@ -191,7 +222,7 @@ const ShipmentDetailScreen: React.FC<{
             >
               <Ionicons
                 name="images-outline"
-                size={wp(10)} // icon size → rf
+                size={wp(10)}
                 color={COLORS.primary}
                 style={{ marginRight: wp(4) }}
               />
@@ -234,7 +265,7 @@ const ShipmentDetailScreen: React.FC<{
             <View style={styles.emptyPhotos}>
               <Ionicons
                 name="image-outline"
-                size={wp(10)} // icon size → rf
+                size={wp(10)}
                 color={COLORS.greyText}
               />
               <CustomText
@@ -283,52 +314,47 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   scroll: {
-    padding: wp(4), // uniform screen padding → wp
+    padding: wp(4),
   },
   section: {
-    marginBottom: wp(4), // vertical margin → hp
+    marginBottom: wp(4),
   },
   sectionTitle: {
-    marginBottom: wp(2), // vertical margin → hp
+    marginBottom: wp(2),
     fontFamily: FONTS.SEMIBOLD,
   },
   bolContainer: {},
-  photoOptions: {
-    // vertical spacing handled via optionCard margin
-  },
+  photoOptions: {},
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: wp(4), // vertical spacing between option cards
+    marginBottom: wp(4),
     backgroundColor: COLORS.white,
-    borderRadius: wp(2), // radius → rf
-    padding: wp(4), // uniform card padding → wp
-    borderWidth: wp(0.2), // border width → rf
+    borderRadius: wp(2),
+    padding: wp(4),
+    borderWidth: wp(0.2),
     borderColor: COLORS.primary,
   },
-  photoGrid: {
-    // spacing handled by individual ImageCard margin
-  },
-
+  photoGrid: {},
   emptyPhotos: {
     backgroundColor: COLORS.white,
-    borderRadius: wp(2), // radius → rf
-    paddingVertical: wp(4), // vertical padding → hp
+    borderRadius: wp(2),
+    paddingVertical: wp(4),
     alignItems: 'center',
-    borderWidth: wp(0.5), // border width → rf
+    borderWidth: wp(0.5),
     borderColor: COLORS.border,
   },
   emptyText: {
     fontFamily: FONTS.REGULAR,
-    marginTop: wp(2), // vertical margin → hp
+    marginTop: wp(2),
   },
   hint: {
     fontFamily: FONTS.REGULAR,
-    marginTop: wp(2), // vertical margin → hp
+    marginTop: wp(2),
     textAlign: 'center',
   },
   uploadBtn: {
-    marginTop: wp(4), // vertical margin → hp
+    marginTop: wp(4),
   },
 });
 

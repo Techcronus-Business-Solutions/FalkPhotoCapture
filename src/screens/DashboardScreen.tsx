@@ -1,5 +1,11 @@
-import React, { useCallback, useState } from 'react';
-import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import Header from '../components/Header';
@@ -11,10 +17,11 @@ import CustomText from '../components/CustomText';
 import { COLORS, FONTS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import { useShipmentStore } from '../store/shipmentStore';
+import { usePendingUploadsStore } from '../store/pendingUploadsStore';
 import { useAuthStore } from '../store/authStore';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import type { DashboardNavigationProp } from '../navigation/types';
-import type { Shipment } from '../data/mockData';
+import type { Shipment } from '../types/shipment';
 import CustomInput from '../components/CustomInput';
 
 const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
@@ -24,10 +31,12 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   const insets = useSafeAreaInsets();
 
   const {
+    shipments,
     filteredShipments,
     searchQuery,
     isLoading,
     syncShipments,
+    syncPendingUploads,
     searchShipments,
   } = useShipmentStore();
   const logout = useAuthStore(state => state.logout);
@@ -42,18 +51,78 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       });
       return;
     }
-    await syncShipments();
-    Toast.show({
-      type: 'success',
-      text1: 'Synced',
-      text2: 'Shipments are up to date.',
-    });
-  }, [isConnected, syncShipments]);
 
-  const handleLogout = useCallback(async () => {
-    setLogoutVisible(false);
-    await logout();
-  }, [logout]);
+    try {
+      await syncPendingUploads();
+
+      try {
+        await syncShipments();
+        Toast.show({
+          type: 'success',
+          text1: 'Synced',
+          text2: 'Shipments and pending uploads are up to date.',
+        });
+      } catch {
+        Toast.show({
+          type: 'success',
+          text1: 'Synced',
+          text2: 'Pending uploads are up to date.',
+        });
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Sync failed',
+        text2:
+          error instanceof Error
+            ? error.message
+            : 'Unable to sync uploads. Please try again.',
+      });
+    }
+  }, [isConnected, syncShipments, syncPendingUploads]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      return;
+    }
+
+    syncShipments().catch(() => {
+      /* ignore initial fetch errors; user can pull to refresh */
+    });
+
+    syncPendingUploads().catch(() => {
+      /* ignore sync errors; user can pull to refresh */
+    });
+  }, [isConnected, syncShipments, syncPendingUploads]);
+
+  const handleLogout = useCallback(() => {
+    // Check for failed shipments or pending uploads before logging out
+    const hasFailedShipment = shipments.some(s => s.status === 'Failed');
+    const pendingUploads = usePendingUploadsStore
+      .getState()
+      .getAllPendingUploads();
+    const hasPendingUploads = pendingUploads.length > 0;
+
+    const proceedLogout = async () => {
+      setLogoutVisible(false);
+      await logout();
+    };
+
+    if (hasFailedShipment || hasPendingUploads) {
+      Alert.alert(
+        'Warning',
+        'There are failed shipments or pending uploads. If you logout now, syncing will stop. Do you want to continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Logout', style: 'destructive', onPress: proceedLogout },
+        ],
+      );
+      return;
+    }
+
+    // No problems, logout immediately
+    proceedLogout();
+  }, [shipments, logout]);
 
   const renderItem = useCallback(
     ({ item }: { item: Shipment }) => (
@@ -114,7 +183,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         keyExtractor={keyExtractor}
         contentContainerStyle={[
           styles.list,
-          { paddingBottom: insets.bottom + wp(2) }, // vertical safe area → hp
+          { paddingBottom: insets.bottom + wp(2) + wp(14) }, // vertical safe area + bottom bar height → hp
         ]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={

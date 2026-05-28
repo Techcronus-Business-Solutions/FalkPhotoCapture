@@ -51,6 +51,7 @@ const assetToPhotoItem = (asset: Asset): PhotoItem => ({
   fileName: asset.fileName,
   fileSize: asset.fileSize,
   type: asset.type,
+  base64: asset.base64,
 });
 
 export const useImagePicker = () => {
@@ -66,7 +67,12 @@ export const useImagePicker = () => {
 
     return new Promise(resolve => {
       launchCamera(
-        { mediaType: 'photo', quality: 0.8, saveToPhotos: false },
+        {
+          mediaType: 'photo',
+          quality: 0.8,
+          saveToPhotos: false,
+          includeBase64: true,
+        },
         (response: ImagePickerResponse) => {
           if (
             response.didCancel ||
@@ -94,7 +100,12 @@ export const useImagePicker = () => {
 
     return new Promise(resolve => {
       launchImageLibrary(
-        { mediaType: 'photo', quality: 0.8, selectionLimit: 1 },
+        {
+          mediaType: 'photo',
+          quality: 0.8,
+          selectionLimit: 1,
+          includeBase64: true,
+        },
         (response: ImagePickerResponse) => {
           if (
             response.didCancel ||

@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   bottomContainer: {
     position: 'absolute',
     bottom: wp(8),
-    width: '100%',
+    width: wp(100),
     alignItems: 'center',
     justifyContent: 'center',
   },

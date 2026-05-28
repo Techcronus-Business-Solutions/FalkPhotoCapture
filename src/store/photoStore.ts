@@ -7,6 +7,7 @@ export interface PhotoItem {
   fileName?: string;
   fileSize?: number;
   type?: string;
+  base64?: string;
 }
 
 interface PhotoState {
@@ -14,6 +15,7 @@ interface PhotoState {
   addPhoto: (shipmentId: string, photo: PhotoItem) => Promise<void>;
   removePhoto: (shipmentId: string, photoId: string) => Promise<void>;
   getPhotos: (shipmentId: string) => PhotoItem[];
+  clearPhotos: (shipmentId: string) => Promise<void>;
   persistPhotos: () => Promise<void>;
   loadPhotos: () => Promise<void>;
 }
@@ -44,6 +46,16 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   },
 
   getPhotos: (shipmentId: string) => get().photosByShipment[shipmentId] ?? [],
+
+  clearPhotos: async (shipmentId: string) => {
+    set(state => ({
+      photosByShipment: {
+        ...state.photosByShipment,
+        [shipmentId]: [],
+      },
+    }));
+    await get().persistPhotos();
+  },
 
   persistPhotos: async () => {
     await storage.setItem(storage.KEYS.PHOTOS, get().photosByShipment);
