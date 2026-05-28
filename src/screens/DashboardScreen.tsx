@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   FlatList,
@@ -37,10 +37,13 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     isLoading,
     syncShipments,
     syncPendingUploads,
+    loadShipments,
     searchShipments,
   } = useShipmentStore();
   const logout = useAuthStore(state => state.logout);
   const { isConnected } = useNetworkStatus();
+
+  const initialLoadRequestedRef = useRef(false);
 
   const handleSync = useCallback(async () => {
     if (!isConnected) {
@@ -82,6 +85,18 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   }, [isConnected, syncShipments, syncPendingUploads]);
 
   useEffect(() => {
+    loadShipments().catch(() => {
+      /* ignore cached load errors */
+    });
+  }, [loadShipments]);
+
+  useEffect(() => {
+    if (initialLoadRequestedRef.current) {
+      return;
+    }
+
+    initialLoadRequestedRef.current = true;
+
     if (!isConnected) {
       return;
     }
@@ -89,11 +104,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     syncShipments().catch(() => {
       /* ignore initial fetch errors; user can pull to refresh */
     });
-
-    syncPendingUploads().catch(() => {
-      /* ignore sync errors; user can pull to refresh */
-    });
-  }, [isConnected, syncShipments, syncPendingUploads]);
+  }, [isConnected, syncShipments]);
 
   const handleLogout = useCallback(() => {
     // Check for failed shipments or pending uploads before logging out
@@ -152,7 +163,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       {!isConnected && (
         <View style={styles.offlineBanner}>
           <CustomText size={FontSize.smallMediumText} color={COLORS.white}>
-            You are offline. Changes will sync when connected.
+            You are offline.
           </CustomText>
         </View>
       )}
