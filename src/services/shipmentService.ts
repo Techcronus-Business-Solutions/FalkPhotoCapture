@@ -1,8 +1,9 @@
 import { getAccessToken } from './AccessTokenProvider';
 import { API_ROUTES } from './ApiRoutes';
+import { useAuthStore } from '../store/authStore';
 import type { Shipment } from '../types/shipment';
 
-const SHIPMENTS_URL = API_ROUTES.SHIPMENTS;
+const SHIPMENTS_BASE_URL = API_ROUTES.SHIPMENTS;
 
 const formatShipmentDate = (rawDate: unknown): string => {
   const dateString =
@@ -34,8 +35,16 @@ const mapApiShipmentToShipment = (item: any): Shipment => ({
 export const shipmentService = {
   fetchShipments: async (): Promise<Shipment[]> => {
     const accessToken = await getAccessToken();
+    const driverID = useAuthStore.getState().user?.driverID;
 
-    const response = await fetch(SHIPMENTS_URL, {
+    // Build URL with query parameters
+    const url = new URL(SHIPMENTS_BASE_URL);
+    url.searchParams.append('$expand', 'sharePointLinks');
+    if (driverID) {
+      url.searchParams.append('$filter', `driver eq '${driverID}'`);
+    }
+
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,

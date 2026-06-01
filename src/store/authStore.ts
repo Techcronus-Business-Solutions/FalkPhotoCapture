@@ -4,6 +4,7 @@ import { storage } from '../utils/storage';
 interface User {
   username: string;
   token: string;
+  driverID?: string;
 }
 
 interface AuthState {

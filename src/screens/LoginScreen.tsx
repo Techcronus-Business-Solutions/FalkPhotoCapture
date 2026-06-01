@@ -52,7 +52,11 @@ const LoginScreen: React.FC = () => {
     try {
       setLoading(true);
       const result = await authService.login({ username, password });
-      await login({ username: result.username, token: result.token });
+      await login({
+        username: result.username,
+        token: result.token,
+        driverID: result.driverID,
+      });
       Toast.show({
         type: 'success',
         text1: 'Login Successful',
