@@ -63,6 +63,12 @@ export const uploadService = {
 
     try {
       const attachments: SalesAttachment[] = [];
+      // Determine next index based on any existing stored uploads for this shipment
+      const pendingUploadsStore = usePendingUploadsStore.getState();
+      const existingForShipment = pendingUploadsStore
+        .getAllPendingUploads()
+        .filter(u => u.shipmentNumber === shipmentNumber).length;
+
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
 
@@ -82,10 +88,10 @@ export const uploadService = {
           throw new Error(`Image ${i + 1} could not be processed.`);
         }
 
-        const baseName = photo.fileName
-          ? photo.fileName.replace(/\.[^.]+$/, '')
-          : `${shipmentNumber}-${i + 1}`;
-        const fileName = `${baseName}.png`;
+        // Generate file name using shipmentNumber and a sequential index.
+        // Use existingForShipment to ensure uniqueness across stored uploads.
+        const index = existingForShipment + i + 1;
+        const fileName = `${shipmentNumber}_${index}.png`;
 
         attachments.push({
           postedShipmentNo: shipmentNumber,
@@ -119,6 +125,11 @@ export const uploadService = {
       const pendingUploadsStore = usePendingUploadsStore.getState();
       const pendingUploads: PendingUpload[] = [];
 
+      // Determine starting index based on any existing stored uploads for this shipment
+      const existingForShipment = pendingUploadsStore
+        .getAllPendingUploads()
+        .filter(u => u.shipmentNumber === shipmentNumber).length;
+
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
 
@@ -136,10 +147,8 @@ export const uploadService = {
           throw new Error(`Image ${i + 1} could not be processed.`);
         }
 
-        const baseName = photo.fileName
-          ? photo.fileName.replace(/\.[^.]+$/, '')
-          : `${shipmentNumber}-${i + 1}`;
-        const fileName = `${baseName}.png`;
+        const index = existingForShipment + i + 1;
+        const fileName = `${shipmentNumber}_${index}.png`;
 
         pendingUploads.push({
           id: `${shipmentId}-${photo.id}`,
