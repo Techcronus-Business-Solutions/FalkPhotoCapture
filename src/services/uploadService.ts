@@ -1,5 +1,7 @@
 import { getAccessToken } from './AccessTokenProvider';
 import { API_ROUTES } from './ApiRoutes';
+import { useShipmentStore } from '../store/shipmentStore';
+import type { ShipmentSharePointLink } from '../types/shipment';
 import type { PhotoItem } from '../store/photoStore';
 import {
   usePendingUploadsStore,
@@ -16,12 +18,13 @@ export interface UploadResult {
 interface SalesAttachment {
   postedShipmentNo: string;
   fileName: string;
-  base64Image: string;
+  base64Image?: string;
+  url1?: string;
 }
 
 const uploadImagesToServer = async (
   attachments: SalesAttachment[],
-): Promise<boolean> => {
+): Promise<SalesAttachment[]> => {
   try {
     const accessToken = await getAccessToken();
 
@@ -45,9 +48,76 @@ const uploadImagesToServer = async (
       throw new Error(message);
     }
 
-    return true;
+    const json = await response.json();
+    // Expecting { salesAttachment: [...] }
+    return Array.isArray(json?.salesAttachment) ? json.salesAttachment : [];
   } catch (error) {
     throw error;
+  }
+};
+
+/**
+ * Merge newly returned salesAttachment items into local shipment's sharePointLinks.
+ * - Preserve existing links
+ * - Avoid duplicate url1 entries
+ * - Generate attachmentNo sequence locally
+ */
+const mergeAttachmentsIntoShipment = async (
+  shipmentNumber: string,
+  newAttachments: SalesAttachment[],
+) => {
+  if (!newAttachments || !newAttachments.length) return;
+
+  const shipmentStore = useShipmentStore.getState();
+  const { shipments } = shipmentStore;
+  const idx = shipments.findIndex(s => s.bolNumber === shipmentNumber);
+  if (idx === -1) return;
+
+  const shipment = shipments[idx];
+  const existing = Array.isArray(shipment.sharePointLinks)
+    ? [...shipment.sharePointLinks]
+    : ([] as ShipmentSharePointLink[]);
+
+  // Build set of existing URLs to avoid duplicates
+  const existingUrls = new Set(existing.map(e => e.url1));
+
+  // Determine highest attachmentNo
+  let maxNo = existing.reduce((acc, cur) => Math.max(acc, cur.attachmentNo), 0);
+
+  const toAppend: ShipmentSharePointLink[] = [];
+  for (const a of newAttachments) {
+    const url = a.url1;
+    const fileName = a.fileName || '';
+    if (!url) continue;
+    if (existingUrls.has(url)) continue;
+    maxNo += 1;
+    toAppend.push({ attachmentNo: maxNo, url1: url, fileName });
+    existingUrls.add(url);
+  }
+
+  if (toAppend.length === 0) return;
+
+  const updatedLinks = [...existing, ...toAppend];
+  const updatedShipment = {
+    ...shipment,
+    sharePointLinks: updatedLinks,
+    status:
+      updatedLinks.length > 0 ? ('Uploaded' as const) : ('Pending' as const),
+    photoCount: updatedLinks.length,
+  };
+
+  const updatedShipments = [...shipments];
+  updatedShipments[idx] = updatedShipment;
+
+  // Update store and persist using zustand setState
+  useShipmentStore.setState({
+    shipments: updatedShipments,
+    filteredShipments: updatedShipments,
+  } as any);
+
+  const storeState = useShipmentStore.getState();
+  if (storeState.persistShipments) {
+    await storeState.persistShipments();
   }
 };
 
@@ -79,7 +149,7 @@ export const uploadService = {
         if (!base64Image && photo.uri) {
           try {
             base64Image = await RNFS.readFile(photo.uri, 'base64');
-          } catch (err) {
+          } catch {
             throw new Error(`Image ${i + 1} could not be processed.`);
           }
         }
@@ -100,7 +170,10 @@ export const uploadService = {
         });
       }
 
-      await uploadImagesToServer(attachments);
+      const returned = await uploadImagesToServer(attachments);
+
+      // Merge returned salesAttachment info into local shipment data
+      await mergeAttachmentsIntoShipment(shipmentNumber, returned);
 
       return {
         success: true,
@@ -138,7 +211,7 @@ export const uploadService = {
         if (!base64Image && photo.uri) {
           try {
             base64Image = await RNFS.readFile(photo.uri, 'base64');
-          } catch (err) {
+          } catch {
             throw new Error(`Image ${i + 1} could not be processed.`);
           }
         }
@@ -181,7 +254,11 @@ export const uploadService = {
       base64Image: upload.base64Image,
     }));
 
-    await uploadImagesToServer(attachments);
+    const returned = await uploadImagesToServer(attachments);
+
+    // Merge into local shipment
+    await mergeAttachmentsIntoShipment(shipmentNumber, returned);
+
     await pendingUploadsStore.markUploadsAsCompleted(
       pendingUploads.map(upload => upload.id),
     );
@@ -226,7 +303,10 @@ export const uploadService = {
           base64Image: u.base64Image,
         }));
 
-        await uploadImagesToServer(attachments);
+        const returned = await uploadImagesToServer(attachments);
+
+        // Merge into local shipment for this group
+        await mergeAttachmentsIntoShipment(uploads[0].shipmentNumber, returned);
 
         syncedIds.push(...uploads.map(u => u.id));
         syncedCount += uploads.length;

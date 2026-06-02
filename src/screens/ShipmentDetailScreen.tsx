@@ -219,10 +219,9 @@ const ShipmentDetailScreen: React.FC<{
           totalUploadedCount += result.uploadedCount;
         }
 
-        if (totalUploadedCount > 0) {
-          updateShipmentStatus(shipmentId, 'Uploaded', totalUploadedCount);
-        }
-
+        // shipmentStore is updated by uploadService.mergeAttachmentsIntoShipment
+        // which preserves existing sharePointLinks and recalculates photoCount.
+        // Avoid overriding photoCount here with only the current upload count.
         await clearPhotos(shipmentId);
         Toast.show({
           type: 'success',

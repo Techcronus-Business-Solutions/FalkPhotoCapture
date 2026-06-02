@@ -45,7 +45,10 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
 
   const initialLoadRequestedRef = useRef(false);
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const handleSync = useCallback(async () => {
+    if (isSyncing) return;
     if (!isConnected) {
       Toast.show({
         type: 'error',
@@ -54,7 +57,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       });
       return;
     }
-
+    setIsSyncing(true);
     try {
       await syncPendingUploads();
 
@@ -81,8 +84,10 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
             ? error.message
             : 'Unable to sync uploads. Please try again.',
       });
+    } finally {
+      setIsSyncing(false);
     }
-  }, [isConnected, syncShipments, syncPendingUploads]);
+  }, [isConnected, syncShipments, syncPendingUploads, isSyncing]);
 
   useEffect(() => {
     loadShipments().catch(() => {
@@ -140,6 +145,8 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       <ShipmentCard
         shipment={item}
         onPress={() =>
+          // Prevent navigation while a sync/refresh is in progress
+          !(isLoading || isSyncing) &&
           navigation.navigate('ShipmentDetail', {
             shipmentId: item.id,
             bolNumber: item.bolNumber,
@@ -147,7 +154,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         }
       />
     ),
-    [navigation],
+    [navigation, isLoading, isSyncing],
   );
 
   const keyExtractor = useCallback((item: Shipment) => item.id, []);
@@ -173,6 +180,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
           placeholder="Search by BoL / Shipment No..."
           value={searchQuery}
           onChangeText={searchShipments}
+          editable={!isLoading && !isSyncing}
           leftIconName="search-outline"
           returnKeyType="next"
           autoComplete="username"
@@ -199,7 +207,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <EmptyView
-            message={isLoading ? 'Loading shipments...' : 'No shipments found.'}
+            message={isLoading ? 'Syncing...' : 'No shipments found.'}
             iconName="cube-outline"
           />
         }
@@ -209,6 +217,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
             onRefresh={handleSync}
             tintColor={COLORS.primary}
             colors={[COLORS.primary]}
+            title="Syncing..."
           />
         }
       />
@@ -222,9 +231,15 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         <CustomButton
           title="Sync Now"
           onPress={handleSync}
-          loading={isLoading}
+          loading={isLoading || isSyncing}
+          disabled={isLoading || isSyncing}
         />
       </View>
+
+      {/* Interaction blocker while syncing/refreshing */}
+      {(isLoading || isSyncing) && (
+        <View style={styles.interactionBlocker} pointerEvents="auto" />
+      )}
 
       <LogoutModal
         visible={logoutVisible}
@@ -260,6 +275,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     paddingHorizontal: wp(4), // horizontal padding → wp
     paddingTop: wp(2), // vertical padding → hp
+  },
+  interactionBlocker: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0)',
+    zIndex: 999,
   },
 });
 
