@@ -1,7 +1,11 @@
 import { getAccessToken } from './AccessTokenProvider';
 import { API_ROUTES } from './ApiRoutes';
 import { useAuthStore } from '../store/authStore';
-import type { Shipment } from '../types/shipment';
+import type {
+  Shipment,
+  ShipmentSharePointLink,
+  ShipmentStatus,
+} from '../types/shipment';
 
 const SHIPMENTS_BASE_URL = API_ROUTES.SHIPMENTS;
 
@@ -24,13 +28,29 @@ const formatShipmentDate = (rawDate: unknown): string => {
   });
 };
 
-const mapApiShipmentToShipment = (item: any): Shipment => ({
-  id: String(item.id ?? item.no ?? ''),
-  bolNumber: String(item.no ?? ''),
-  date: formatShipmentDate(item.shipmentDate),
-  status: 'Pending',
-  photoCount: 0,
-});
+const mapApiShipmentToShipment = (item: any): Shipment => {
+  const sharePointLinks: ShipmentSharePointLink[] = Array.isArray(
+    item.sharePointLinks,
+  )
+    ? item.sharePointLinks.map((link: any) => ({
+        attachmentNo: Number(link.attachmentNo ?? 0),
+        url1: String(link.url1 ?? ''),
+        fileName: String(link.fileName ?? ''),
+      }))
+    : [];
+
+  const status: ShipmentStatus =
+    sharePointLinks.length > 0 ? 'Uploaded' : 'Pending';
+
+  return {
+    id: String(item.id ?? item.no ?? ''),
+    bolNumber: String(item.no ?? ''),
+    date: formatShipmentDate(item.shipmentDate),
+    status,
+    photoCount: sharePointLinks.length,
+    sharePointLinks,
+  };
+};
 
 export const shipmentService = {
   fetchShipments: async (): Promise<Shipment[]> => {

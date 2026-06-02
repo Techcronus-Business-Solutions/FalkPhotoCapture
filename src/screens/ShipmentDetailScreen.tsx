@@ -59,7 +59,12 @@ const ShipmentDetailScreen: React.FC<{
     () => photosByShipment[shipmentId] ?? EMPTY_PHOTOS,
     [photosByShipment, shipmentId],
   );
-  const { updateShipmentStatus } = useShipmentStore();
+  const { updateShipmentStatus, shipments } = useShipmentStore();
+  const shipment = useMemo(
+    () => shipments.find(item => item.id === shipmentId),
+    [shipments, shipmentId],
+  );
+  const [serverPhotos, setServerPhotos] = useState<PhotoItem[]>([]);
   const { takePhoto, pickFromGallery } = useImagePicker();
   const pendingUploadEntries = usePendingUploadsStore(
     state => state.pendingUploads,
@@ -85,8 +90,8 @@ const ShipmentDetailScreen: React.FC<{
   );
 
   const displayedPhotos = useMemo(
-    () => [...pendingPhotos, ...photos],
-    [pendingPhotos, photos],
+    () => [...serverPhotos, ...pendingPhotos, ...photos],
+    [serverPhotos, pendingPhotos, photos],
   );
 
   const photosCountRef = useRef(photos.length);
@@ -96,9 +101,26 @@ const ShipmentDetailScreen: React.FC<{
   }, [photos.length]);
 
   useEffect(() => {
+    if (!shipment?.sharePointLinks?.length) {
+      setServerPhotos([]);
+      return;
+    }
+
+    setServerPhotos(
+      shipment.sharePointLinks.map(link => ({
+        id: `server-${shipmentId}-${link.attachmentNo}`,
+        uri: isConnected ? link.url1 : '',
+        fileName: link.fileName,
+        isServerImage: true,
+        isPlaceholder: !isConnected,
+      })) as PhotoItem[],
+    );
+  }, [shipment, shipmentId, isConnected]);
+
+  useEffect(() => {
     return () => {
       if (photosCountRef.current > 0) {
-        void clearPhotos(shipmentId);
+        clearPhotos(shipmentId);
       }
     };
   }, [clearPhotos, shipmentId]);
@@ -251,11 +273,34 @@ const ShipmentDetailScreen: React.FC<{
   ]);
 
   const renderPhoto = useCallback(
-    ({ item }: { item: PhotoItem }) => (
-      <ImageCard uri={item.uri} onRemove={() => handleRemove(item.id)} />
-    ),
-    [handleRemove],
+    ({ item }: { item: PhotoItem }) => {
+      if (item.isServerImage) {
+        // Server images are read-only. If offline, pass empty uri so
+        // ImageCard shows the placeholder message 'Offline'. When online
+        // we pass the actual URL and ImageCard will show 'Image Not Available'
+        // if the URL fails to load.
+        return (
+          <ImageCard
+            uri={isConnected ? item.uri : ''}
+            onRemove={undefined}
+            showPlaceholderOnError
+            placeholderMessage={isConnected ? undefined : 'Offline'}
+          />
+        );
+      }
+
+      return (
+        <ImageCard
+          uri={item.uri}
+          onRemove={() => handleRemove(item.id)}
+          showPlaceholderOnError
+        />
+      );
+    },
+    [handleRemove, isConnected],
   );
+
+  const isBusy = selectingPhotos;
 
   return (
     <View style={styles.root}>
@@ -418,7 +463,7 @@ const ShipmentDetailScreen: React.FC<{
         onConfirm={handleConfirmDelete}
       />
 
-      <Modal visible={selectingPhotos} transparent animationType="fade">
+      <Modal visible={isBusy} transparent animationType="fade">
         <View style={styles.loaderOverlay}>
           <Loader />
           <CustomText
@@ -473,6 +518,20 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: FONTS.REGULAR,
     marginTop: wp(2),
+  },
+  placeholderCard: {
+    width: wp(28),
+    height: wp(28),
+    margin: wp(1),
+    borderRadius: wp(2),
+    backgroundColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderText: {
+    marginTop: wp(1),
+    textAlign: 'center',
+    fontFamily: FONTS.REGULAR,
   },
   hint: {
     fontFamily: FONTS.REGULAR,

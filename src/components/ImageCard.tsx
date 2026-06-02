@@ -1,29 +1,85 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import { Image, View, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { COLORS } from '../assets/constants';
+import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
+import CustomText from './CustomText';
 
 interface ImageCardProps {
   uri: string;
-  onRemove: () => void;
+  onRemove?: () => void;
+  showPlaceholderOnError?: boolean;
+  placeholderMessage?: string;
 }
 
 // Square thumbnail — width-driven so wp is the right anchor
 const IMAGE_SIZE = wp(28);
 
-const ImageCard: React.FC<ImageCardProps> = ({ uri, onRemove }) => (
-  <View style={styles.container}>
-    <Image source={{ uri }} style={styles.image} resizeMode="cover" />
-    <TouchableOpacity
-      onPress={onRemove}
-      style={styles.removeBtn}
-      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-    >
-      <Ionicons name="close-circle" size={wp(6)} color={COLORS.failed} />
-    </TouchableOpacity>
-  </View>
-);
+const ImageCard: React.FC<ImageCardProps> = ({
+  uri,
+  onRemove,
+  showPlaceholderOnError,
+  placeholderMessage,
+}) => {
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [uri]);
+
+  const shouldShowPlaceholder = showPlaceholderOnError
+    ? hasError || !uri
+    : !uri;
+
+  if (shouldShowPlaceholder) {
+    const message = errorMessage ?? placeholderMessage ?? 'No Image Available';
+    return (
+      <View style={styles.container}>
+        <View style={styles.placeholderInner}>
+          <Ionicons
+            name="image-outline"
+            size={wp(16)}
+            color={COLORS.greyText}
+          />
+          <CustomText
+            size={FontSize.tinyText}
+            color={COLORS.greyText}
+            style={{ marginTop: wp(1) }}
+          >
+            {message}
+          </CustomText>
+        </View>
+        <View style={styles.placeholderOverlay} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <Image
+        source={{ uri }}
+        style={styles.image}
+        resizeMode="cover"
+        onError={() => {
+          if (showPlaceholderOnError) {
+            setErrorMessage('Image Not Available');
+            setHasError(true);
+          }
+        }}
+      />
+      {onRemove ? (
+        <TouchableOpacity
+          onPress={onRemove}
+          style={styles.removeBtn}
+          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+        >
+          <Ionicons name="close-circle" size={wp(6)} color={COLORS.failed} />
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -36,6 +92,18 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  placeholderInner: {
+    flex: 1,
+    backgroundColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderOverlay: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   removeBtn: {
     position: 'absolute',

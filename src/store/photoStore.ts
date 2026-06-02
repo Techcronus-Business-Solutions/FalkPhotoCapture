@@ -8,6 +8,8 @@ export interface PhotoItem {
   type?: string;
   base64?: string;
   pendingUploadId?: string;
+  isServerImage?: boolean;
+  isPlaceholder?: boolean;
 }
 
 interface PhotoState {
