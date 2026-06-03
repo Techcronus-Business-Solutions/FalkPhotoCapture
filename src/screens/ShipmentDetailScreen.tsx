@@ -83,7 +83,7 @@ const ShipmentDetailScreen: React.FC<{
     () =>
       pendingUploads.map(upload => ({
         id: `offline-${upload.id}`,
-        uri: `data:image/png;base64,${upload.base64Image}`,
+        uri: upload.uri,
         fileName: upload.fileName,
         pendingUploadId: upload.id,
       })),

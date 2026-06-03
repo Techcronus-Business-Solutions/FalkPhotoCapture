@@ -121,6 +121,93 @@ const mergeAttachmentsIntoShipment = async (
   }
 };
 
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const getHighestImageIndexForShipment = (
+  shipmentNumber: string,
+  pendingUploads: PendingUpload[],
+): number => {
+  const shipmentStore = useShipmentStore.getState();
+  const shipment = shipmentStore.shipments.find(
+    s => s.bolNumber === shipmentNumber,
+  );
+
+  const indices: number[] = [];
+
+  if (shipment?.sharePointLinks?.length) {
+    shipment.sharePointLinks.forEach(link => {
+      const match = link.fileName.match(
+        new RegExp(`^${escapeRegExp(shipmentNumber)}_(\\d+)\\.png$`, 'i'),
+      );
+      if (match) {
+        indices.push(Number(match[1]));
+      }
+    });
+  }
+
+  pendingUploads.forEach(upload => {
+    const match = upload.fileName.match(
+      new RegExp(`^${escapeRegExp(shipmentNumber)}_(\\d+)\\.png$`, 'i'),
+    );
+    if (match) {
+      indices.push(Number(match[1]));
+    }
+  });
+
+  return indices.length ? Math.max(...indices) : 0;
+};
+
+const getOfflineUploadBase64 = async (
+  upload: PendingUpload,
+): Promise<string> => {
+  if (upload.base64Image) {
+    return upload.base64Image;
+  }
+
+  if (!upload.uri) {
+    throw new Error('Offline upload is missing a local image URI.');
+  }
+
+  return await RNFS.readFile(upload.uri, 'base64');
+};
+
+const buildAttachmentsFromPending = async (
+  uploads: PendingUpload[],
+): Promise<SalesAttachment[]> => {
+  const attachments: SalesAttachment[] = [];
+
+  for (const upload of uploads) {
+    const base64Image = await getOfflineUploadBase64(upload);
+    attachments.push({
+      postedShipmentNo: upload.shipmentNumber,
+      fileName: upload.fileName,
+      base64Image,
+    });
+  }
+
+  return attachments;
+};
+
+const ensureOfflinePhotoUri = async (
+  photo: PhotoItem,
+  fileName: string,
+): Promise<string> => {
+  if (photo.uri && !photo.uri.startsWith('data:')) {
+    return photo.uri;
+  }
+
+  if (!photo.base64) {
+    throw new Error(
+      `Image ${fileName} could not be persisted for offline upload.`,
+    );
+  }
+
+  const path = `${RNFS.DocumentDirectoryPath}/${fileName}`;
+  await RNFS.writeFile(path, photo.base64, 'base64');
+  return path;
+};
+
 export const uploadService = {
   uploadPhotos: async (
     shipmentId: string,
@@ -133,11 +220,14 @@ export const uploadService = {
 
     try {
       const attachments: SalesAttachment[] = [];
-      // Determine next index based on any existing stored uploads for this shipment
       const pendingUploadsStore = usePendingUploadsStore.getState();
-      const existingForShipment = pendingUploadsStore
+      const existingPendingUploads = pendingUploadsStore
         .getAllPendingUploads()
-        .filter(u => u.shipmentNumber === shipmentNumber).length;
+        .filter(u => u.shipmentNumber === shipmentNumber);
+      const startIndex = getHighestImageIndexForShipment(
+        shipmentNumber,
+        existingPendingUploads,
+      );
 
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
@@ -159,8 +249,7 @@ export const uploadService = {
         }
 
         // Generate file name using shipmentNumber and a sequential index.
-        // Use existingForShipment to ensure uniqueness across stored uploads.
-        const index = existingForShipment + i + 1;
+        const index = startIndex + i + 1;
         const fileName = `${shipmentNumber}_${index}.png`;
 
         attachments.push({
@@ -198,36 +287,27 @@ export const uploadService = {
       const pendingUploadsStore = usePendingUploadsStore.getState();
       const pendingUploads: PendingUpload[] = [];
 
-      // Determine starting index based on any existing stored uploads for this shipment
-      const existingForShipment = pendingUploadsStore
+      // Determine starting index based on existing server uploads and pending uploads.
+      const existingPendingUploads = pendingUploadsStore
         .getAllPendingUploads()
-        .filter(u => u.shipmentNumber === shipmentNumber).length;
+        .filter(u => u.shipmentNumber === shipmentNumber);
+      const startIndex = getHighestImageIndexForShipment(
+        shipmentNumber,
+        existingPendingUploads,
+      );
 
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
 
-        // Ensure we have a base64 string to persist for offline uploads.
-        let base64Image = photo.base64;
-        if (!base64Image && photo.uri) {
-          try {
-            base64Image = await RNFS.readFile(photo.uri, 'base64');
-          } catch {
-            throw new Error(`Image ${i + 1} could not be processed.`);
-          }
-        }
-
-        if (!base64Image) {
-          throw new Error(`Image ${i + 1} could not be processed.`);
-        }
-
-        const index = existingForShipment + i + 1;
+        const index = startIndex + i + 1;
         const fileName = `${shipmentNumber}_${index}.png`;
+        const uri = await ensureOfflinePhotoUri(photo, fileName);
 
         pendingUploads.push({
           id: `${shipmentId}-${photo.id}`,
           shipmentNumber,
           fileName,
-          base64Image,
+          uri,
           uploadStatus: 'pending',
         });
       }
@@ -248,11 +328,7 @@ export const uploadService = {
     }
 
     const pendingUploadsStore = usePendingUploadsStore.getState();
-    const attachments: SalesAttachment[] = pendingUploads.map(upload => ({
-      postedShipmentNo: upload.shipmentNumber,
-      fileName: upload.fileName,
-      base64Image: upload.base64Image,
-    }));
+    const attachments = await buildAttachmentsFromPending(pendingUploads);
 
     const returned = await uploadImagesToServer(attachments);
 
@@ -297,11 +373,7 @@ export const uploadService = {
     // Upload each shipment's images
     for (const [_, uploads] of Object.entries(groupedByShipment)) {
       try {
-        const attachments: SalesAttachment[] = uploads.map(u => ({
-          postedShipmentNo: u.shipmentNumber,
-          fileName: u.fileName,
-          base64Image: u.base64Image,
-        }));
+        const attachments = await buildAttachmentsFromPending(uploads);
 
         const returned = await uploadImagesToServer(attachments);
 

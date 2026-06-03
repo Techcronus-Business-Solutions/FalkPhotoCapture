@@ -5,7 +5,8 @@ export interface PendingUpload {
   id: string;
   shipmentNumber: string;
   fileName: string;
-  base64Image: string;
+  uri: string;
+  base64Image?: string;
   uploadStatus: 'pending' | 'completed';
 }
 
