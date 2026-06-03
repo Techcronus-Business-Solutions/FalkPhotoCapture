@@ -30,22 +30,23 @@ const checkCameraPermission = async (): Promise<boolean> => {
 };
 
 const checkLibraryPermission = async (): Promise<boolean> => {
-  const permission =
-    Platform.OS === 'ios'
-      ? PERMISSIONS.IOS.PHOTO_LIBRARY
-      : Number(Platform.Version) >= 33
-      ? PERMISSIONS.ANDROID.READ_MEDIA_IMAGES
-      : PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE;
+  if (Platform.OS === 'ios') {
+    const result = await check(PERMISSIONS.IOS.PHOTO_LIBRARY);
 
-  const result = await check(permission);
-  if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
-    return true;
+    if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
+      return true;
+    }
+
+    if (result === RESULTS.DENIED) {
+      const requested = await request(PERMISSIONS.IOS.PHOTO_LIBRARY);
+      return requested === RESULTS.GRANTED || requested === RESULTS.LIMITED;
+    }
+
+    return false;
   }
-  if (result === RESULTS.DENIED) {
-    const requested = await request(permission);
-    return requested === RESULTS.GRANTED || requested === RESULTS.LIMITED;
-  }
-  return false;
+
+  // Android: no gallery permission required
+  return true;
 };
 
 const convertToPngBase64 = async (

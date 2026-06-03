@@ -44,6 +44,7 @@ const ShipmentDetailScreen: React.FC<{
 }> = ({ navigation, route }) => {
   const { shipmentId, bolNumber } = route.params;
   const [uploading, setUploading] = useState(false);
+  const uploadingRef = useRef(false);
   const [selectingPhotos, setSelectingPhotos] = useState(false);
   const [deleteImageModalVisible, setDeleteImageModalVisible] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
@@ -185,6 +186,8 @@ const ShipmentDetailScreen: React.FC<{
   }, [removePhoto, shipmentId, selectedPhotoId]);
 
   const handleUpload = useCallback(async () => {
+    if (uploadingRef.current) return;
+
     if (!photos.length && !(pendingUploads?.length ?? 0)) {
       Toast.show({
         type: 'error',
@@ -195,6 +198,7 @@ const ShipmentDetailScreen: React.FC<{
     }
 
     try {
+      uploadingRef.current = true;
       setUploading(true);
 
       if (isConnected) {
@@ -258,6 +262,7 @@ const ShipmentDetailScreen: React.FC<{
         text2: err instanceof Error ? err.message : 'Please try again.',
       });
     } finally {
+      uploadingRef.current = false;
       setUploading(false);
     }
   }, [
@@ -448,7 +453,7 @@ const ShipmentDetailScreen: React.FC<{
           title="  Upload"
           onPress={handleUpload}
           loading={uploading}
-          disabled={!displayedPhotos.length}
+          disabled={!displayedPhotos.length || uploading}
           style={styles.uploadBtn}
         />
       </ScrollView>

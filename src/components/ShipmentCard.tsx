@@ -15,10 +15,16 @@ const STATUS_COLORS: Record<ShipmentStatus, string> = {
 
 interface ShipmentCardProps {
   shipment: Shipment;
+  displayStatus?: ShipmentStatus;
   onPress: () => void;
 }
 
-const ShipmentCard: React.FC<ShipmentCardProps> = ({ shipment, onPress }) => {
+const ShipmentCard: React.FC<ShipmentCardProps> = ({
+  shipment,
+  displayStatus,
+  onPress,
+}) => {
+  const status = displayStatus ?? shipment.status;
   const sharePointCount =
     (shipment as any)?.sharePointLinks?.length ?? shipment.photoCount ?? 0;
 
@@ -60,17 +66,14 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({ shipment, onPress }) => {
 
       <View style={styles.right}>
         <View
-          style={[
-            styles.badge,
-            { backgroundColor: STATUS_COLORS[shipment.status] },
-          ]}
+          style={[styles.badge, { backgroundColor: STATUS_COLORS[status] }]}
         >
           <CustomText
             size={FontSize.tinyText}
             color={COLORS.white}
             style={{ fontFamily: FONTS.SEMIBOLD }}
           >
-            {shipment.status}
+            {status}
           </CustomText>
         </View>
         <Ionicons

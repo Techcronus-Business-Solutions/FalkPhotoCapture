@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   FlatList,
@@ -21,7 +27,7 @@ import { usePendingUploadsStore } from '../store/pendingUploadsStore';
 import { useAuthStore } from '../store/authStore';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import type { DashboardNavigationProp } from '../navigation/types';
-import type { Shipment } from '../types/shipment';
+import type { Shipment, ShipmentStatus } from '../types/shipment';
 import CustomInput from '../components/CustomInput';
 
 const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
@@ -42,13 +48,44 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   } = useShipmentStore();
   const logout = useAuthStore(state => state.logout);
   const { isConnected } = useNetworkStatus();
+  const pendingUploadEntries = usePendingUploadsStore(
+    state => state.pendingUploads,
+  );
 
+  const displayShipments = useMemo<
+    Array<{ shipment: Shipment; displayStatus: ShipmentStatus }>
+  >(
+    () =>
+      filteredShipments.map(shipment => {
+        if (shipment.status !== 'Failed') {
+          return { shipment, displayStatus: shipment.status };
+        }
+
+        const sharePointCount = shipment.sharePointLinks?.length ?? 0;
+        const pendingCount = pendingUploadEntries.filter(
+          upload =>
+            upload.shipmentNumber === shipment.bolNumber &&
+            upload.uploadStatus === 'pending',
+        ).length;
+
+        if (pendingCount === 0) {
+          return {
+            shipment,
+            displayStatus: sharePointCount > 0 ? 'Uploaded' : 'Pending',
+          };
+        }
+
+        return { shipment, displayStatus: 'Failed' };
+      }),
+    [filteredShipments, pendingUploadEntries],
+  );
   const initialLoadRequestedRef = useRef(false);
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const isSyncingRef = useRef(false);
 
   const handleSync = useCallback(async () => {
-    if (isSyncing) return;
+    if (isSyncingRef.current) return;
     if (!isConnected) {
       Toast.show({
         type: 'error',
@@ -57,6 +94,8 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       });
       return;
     }
+    // immediate guard to prevent double-starts (double-tap or concurrent calls)
+    isSyncingRef.current = true;
     setIsSyncing(true);
     try {
       await syncPendingUploads();
@@ -85,9 +124,10 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
             : 'Unable to sync uploads. Please try again.',
       });
     } finally {
+      isSyncingRef.current = false;
       setIsSyncing(false);
     }
-  }, [isConnected, syncShipments, syncPendingUploads, isSyncing]);
+  }, [isConnected, syncShipments, syncPendingUploads]);
 
   useEffect(() => {
     loadShipments().catch(() => {
@@ -114,10 +154,10 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   const handleLogout = useCallback(() => {
     // Check for failed shipments or pending uploads before logging out
     const hasFailedShipment = shipments.some(s => s.status === 'Failed');
-    const pendingUploads = usePendingUploadsStore
+    const allPendingUploads = usePendingUploadsStore
       .getState()
       .getAllPendingUploads();
-    const hasPendingUploads = pendingUploads.length > 0;
+    const hasPendingUploads = allPendingUploads.length > 0;
 
     const proceedLogout = async () => {
       setLogoutVisible(false);
@@ -141,15 +181,20 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   }, [shipments, logout]);
 
   const renderItem = useCallback(
-    ({ item }: { item: Shipment }) => (
+    ({
+      item,
+    }: {
+      item: { shipment: Shipment; displayStatus: ShipmentStatus };
+    }) => (
       <ShipmentCard
-        shipment={item}
+        shipment={item.shipment}
+        displayStatus={item.displayStatus}
         onPress={() =>
           // Prevent navigation while a sync/refresh is in progress
           !(isLoading || isSyncing) &&
           navigation.navigate('ShipmentDetail', {
-            shipmentId: item.id,
-            bolNumber: item.bolNumber,
+            shipmentId: item.shipment.id,
+            bolNumber: item.shipment.bolNumber,
           })
         }
       />
@@ -157,7 +202,10 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     [navigation, isLoading, isSyncing],
   );
 
-  const keyExtractor = useCallback((item: Shipment) => item.id, []);
+  const keyExtractor = useCallback(
+    (item: { shipment: Shipment }) => item.shipment.id,
+    [],
+  );
 
   return (
     <View style={styles.root}>
@@ -197,7 +245,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       </CustomText>
 
       <FlatList
-        data={filteredShipments}
+        data={displayShipments}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         contentContainerStyle={[
