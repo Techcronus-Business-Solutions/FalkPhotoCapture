@@ -57,8 +57,9 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   >(
     () =>
       filteredShipments.map(shipment => {
-        if (shipment.status !== 'Failed') {
-          return { shipment, displayStatus: shipment.status };
+        const status = shipment.status;
+        if (status !== 'Offline') {
+          return { shipment, displayStatus: status };
         }
 
         const sharePointCount = shipment.sharePointLinks?.length ?? 0;
@@ -75,7 +76,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
           };
         }
 
-        return { shipment, displayStatus: 'Failed' };
+        return { shipment, displayStatus: 'Offline' };
       }),
     [filteredShipments, pendingUploadEntries],
   );
@@ -117,7 +118,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Sync failed',
+        text1: 'Sync Error',
         text2:
           error instanceof Error
             ? error.message
@@ -152,8 +153,8 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   }, [isConnected, syncShipments]);
 
   const handleLogout = useCallback(() => {
-    // Check for failed shipments or pending uploads before logging out
-    const hasFailedShipment = shipments.some(s => s.status === 'Failed');
+    // Check for offline shipments or pending uploads before logging out
+    const hasOfflineShipment = shipments.some(s => s.status === 'Offline');
     const allPendingUploads = usePendingUploadsStore
       .getState()
       .getAllPendingUploads();
@@ -164,10 +165,10 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       await logout();
     };
 
-    if (hasFailedShipment || hasPendingUploads) {
+    if (hasOfflineShipment || hasPendingUploads) {
       Alert.alert(
         'Warning',
-        'There are failed shipments or pending uploads. If you logout now, syncing will stop. Do you want to continue?',
+        'There are offline shipments or pending uploads. If you logout now, syncing will stop. Do you want to continue?',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Logout', style: 'destructive', onPress: proceedLogout },
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   offlineBanner: {
-    backgroundColor: COLORS.failed,
+    backgroundColor: COLORS.offline,
     alignItems: 'center',
     paddingVertical: wp(2), // vertical padding → hp
     paddingHorizontal: wp(4), // horizontal padding → wp

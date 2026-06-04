@@ -245,7 +245,7 @@ const ShipmentDetailScreen: React.FC<{
         }
 
         await uploadService.uploadPhotosOffline(shipmentId, bolNumber, photos);
-        updateShipmentStatus(shipmentId, 'Failed');
+        updateShipmentStatus(shipmentId, 'Offline');
         await clearPhotos(shipmentId);
         Toast.show({
           type: 'info',
@@ -255,10 +255,10 @@ const ShipmentDetailScreen: React.FC<{
         navigation.goBack();
       }
     } catch (err: unknown) {
-      updateShipmentStatus(shipmentId, 'Failed');
+      updateShipmentStatus(shipmentId, 'Offline');
       Toast.show({
         type: 'error',
-        text1: 'Upload Failed',
+        text1: 'Upload Error',
         text2: err instanceof Error ? err.message : 'Please try again.',
       });
     } finally {

@@ -10,7 +10,7 @@ import { usePendingUploadsStore } from '../store/pendingUploadsStore';
 const STATUS_COLORS: Record<ShipmentStatus, string> = {
   Pending: COLORS.pending,
   Uploaded: COLORS.uploaded,
-  Failed: COLORS.failed,
+  Offline: COLORS.offline,
 };
 
 interface ShipmentCardProps {
@@ -38,7 +38,7 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({
   );
 
   let imageCount = sharePointCount;
-  if (shipment.status === 'Failed') {
+  if (shipment.status === 'Offline') {
     imageCount = sharePointCount + pendingCount;
   }
 
