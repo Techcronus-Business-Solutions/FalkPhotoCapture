@@ -11,6 +11,8 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
+  Text,
+  TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -29,12 +31,14 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import type { DashboardNavigationProp } from '../navigation/types';
 import type { Shipment, ShipmentStatus } from '../types/shipment';
 import CustomInput from '../components/CustomInput';
+import { Camera } from 'react-native-camera-kit';
 
 const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   navigation,
 }) => {
   const [logoutVisible, setLogoutVisible] = useState(false);
   const insets = useSafeAreaInsets();
+  const [scannerVisible, setScannerVisible] = useState(false);
 
   const {
     shipments,
@@ -84,6 +88,28 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
 
   const [isSyncing, setIsSyncing] = useState(false);
   const isSyncingRef = useRef(false);
+  const wasConnectedRef = useRef(isConnected);
+
+  const handleReadCode = useCallback(
+    (event: { nativeEvent: { codeStringValue: string } }) => {
+      const codeStringValue = event.nativeEvent.codeStringValue;
+      if (!codeStringValue) {
+        return;
+      }
+
+      console.log('BarcodeScanner scanned value:', codeStringValue);
+      Toast.show({
+        type: 'info',
+        text1: 'BarcodeScanner scanned value',
+        text2: codeStringValue,
+      });
+
+      setTimeout(() => {
+        setScannerVisible(false);
+      }, 800);
+    },
+    [],
+  );
 
   const handleSync = useCallback(async () => {
     if (isSyncingRef.current) return;
@@ -135,6 +161,46 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       /* ignore cached load errors */
     });
   }, [loadShipments]);
+
+  useEffect(() => {
+    const wasConnected = wasConnectedRef.current;
+    wasConnectedRef.current = isConnected;
+    const pendingCount =
+      usePendingUploadsStore.getState().pendingUploads.length;
+
+    if (!wasConnected && isConnected && pendingCount > 0) {
+      const uploadOfflineData = async () => {
+        if (isSyncingRef.current) return;
+
+        isSyncingRef.current = true;
+        setIsSyncing(true);
+
+        try {
+          await syncPendingUploads();
+
+          Toast.show({
+            type: 'success',
+            text1: 'Offline Data Synced',
+            text2: 'Pending offline uploads were delivered successfully.',
+          });
+        } catch (error) {
+          Toast.show({
+            type: 'error',
+            text1: 'Sync Error',
+            text2:
+              error instanceof Error
+                ? error.message
+                : 'Unable to sync offline uploads. Please try again.',
+          });
+        } finally {
+          isSyncingRef.current = false;
+          setIsSyncing(false);
+        }
+      };
+
+      uploadOfflineData();
+    }
+  }, [isConnected, syncPendingUploads]);
 
   useEffect(() => {
     if (initialLoadRequestedRef.current) {
@@ -214,6 +280,8 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         title="Dashboard"
         leftIconName="log-out-outline"
         onLeftPress={() => setLogoutVisible(true)}
+        rightIconName="barcode-outline"
+        onRightPress={() => setScannerVisible(true)}
       />
 
       {!isConnected && (
@@ -287,7 +355,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
 
       {/* Interaction blocker while syncing/refreshing */}
       {(isLoading || isSyncing) && (
-        <View style={styles.interactionBlocker} pointerEvents="auto" />
+        <View style={styles.interactionBlocker} pointerEvents="none" />
       )}
 
       <LogoutModal
@@ -295,6 +363,30 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         onCancel={() => setLogoutVisible(false)}
         onConfirm={handleLogout}
       />
+      {scannerVisible && (
+        <View style={styles.modalBackdrop}>
+          <View style={styles.scannerPopup}>
+            <Camera
+              style={styles.camera}
+              scanBarcode
+              showFrame
+              laserColor={COLORS.white}
+              frameColor={COLORS.primary}
+              ratioOverlay="1:1"
+              ratioOverlayColor="rgba(0,0,0,0.5)"
+              onReadCode={handleReadCode}
+            />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setScannerVisible(false);
+              }}
+            >
+              <Text style={styles.closeText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -313,6 +405,39 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: wp(4), // horizontal padding → wp
     paddingVertical: wp(5), // vertical padding → hp
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+    elevation: 20,
+  },
+  scannerPopup: {
+    width: '90%',
+    height: wp(50), // make it a square based on screen width
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: COLORS.black,
+  },
+  camera: {
+    flex: 1,
+  },
+
+  closeButton: {
+    paddingVertical: wp(3),
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+  },
+  closeText: {
+    color: COLORS.white,
+    fontSize: FontSize.normalText,
+    fontFamily: FONTS.BOLD,
   },
 
   list: {},
