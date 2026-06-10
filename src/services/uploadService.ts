@@ -43,6 +43,7 @@ const uploadImagesToServer = async (
 
     if (!response.ok) {
       const responseText = await response.text();
+      console.log('Image API Response:', responseText);
       const message =
         responseText || `Upload failed with status ${response.status}`;
       throw new Error(message);

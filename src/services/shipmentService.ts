@@ -73,6 +73,7 @@ export const shipmentService = {
     });
 
     const responseText = await response.text();
+    console.log('Shipment API Response:', responseText);
 
     if (!response.ok) {
       const message =

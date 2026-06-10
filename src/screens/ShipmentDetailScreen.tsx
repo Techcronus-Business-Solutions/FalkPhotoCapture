@@ -22,6 +22,7 @@ import CustomButton from '../components/CustomButton';
 import ImageCard from '../components/ImageCard';
 import DeleteImageModal from '../components/DeleteImageModal';
 import Loader from '../components/Loader';
+import EmptyView from '../components/EmptyView';
 import { COLORS, FONTS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import { usePhotoStore, type PhotoItem } from '../store/photoStore';
@@ -118,10 +119,10 @@ const ShipmentDetailScreen: React.FC<{
           setServerPhotos(
             shipment.sharePointLinks.map(link => ({
               id: `server-${shipmentId}-${link.attachmentNo}`,
-              uri: '',
+              uri: link.url1,
               fileName: link.fileName,
               isServerImage: true,
-              isPlaceholder: true,
+              isPlaceholder: false,
             })) as PhotoItem[],
           );
         }
@@ -354,6 +355,23 @@ const ShipmentDetailScreen: React.FC<{
   );
 
   const isBusy = selectingPhotos;
+
+  // If shipment not found, show empty state
+  if (!shipment) {
+    return (
+      <View style={styles.root}>
+        <Header
+          title="Shipment"
+          onLeftPress={() => navigation.goBack()}
+          leftIconName="arrow-back"
+        />
+        <EmptyView
+          message="No shipment found"
+          iconName="alert-circle-outline"
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>

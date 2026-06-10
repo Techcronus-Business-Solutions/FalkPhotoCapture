@@ -1,5 +1,6 @@
 import React, { memo, useEffect, useState } from 'react';
-import { Image, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import FastImage, { type Source } from 'react-native-fast-image';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
@@ -57,14 +58,16 @@ const ImageCard: React.FC<ImageCardProps> = ({
     );
   }
 
-  const imageSource = headers ? { uri, headers } : { uri };
+  const imageSource: Source = headers
+    ? { uri, headers, cache: FastImage.cacheControl.immutable }
+    : { uri, cache: FastImage.cacheControl.immutable };
 
   return (
     <View style={styles.container}>
-      <Image
+      <FastImage
         source={imageSource}
         style={styles.image}
-        resizeMode="cover"
+        resizeMode={FastImage.resizeMode.cover}
         onError={() => {
           if (showPlaceholderOnError) {
             setErrorMessage('Image Not Available');

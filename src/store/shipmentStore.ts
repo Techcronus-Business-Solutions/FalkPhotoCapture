@@ -33,6 +33,11 @@ export const useShipmentStore = create<ShipmentState>((set, get) => ({
       set({ shipments, filteredShipments: shipments, isLoading: false });
       get().searchShipments(get().searchQuery);
       await get().persistShipments();
+
+      // If API returns empty shipments, clear old offline cache to avoid stale data
+      if (shipments.length === 0) {
+        await storage.removeItem(storage.KEYS.SHIPMENTS);
+      }
     } catch (error) {
       set({ isLoading: false });
       throw error;
