@@ -8,7 +8,7 @@ import type { Shipment, ShipmentStatus } from '../types/shipment';
 import { usePendingUploadsStore } from '../store/pendingUploadsStore';
 
 const STATUS_COLORS: Record<ShipmentStatus, string> = {
-  Pending: COLORS.pending,
+  'Ready to Ship': COLORS.pending,
   Uploaded: COLORS.uploaded,
   Offline: COLORS.offline,
 };
@@ -52,6 +52,15 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({
         >
           {shipment.bolNumber}
         </CustomText>
+
+        <CustomText
+          size={FontSize.smallMediumText}
+          color={COLORS.greyText}
+          style={styles.sub}
+        >
+          {`SO: ${shipment.salesOrderNo}`}
+        </CustomText>
+
         <CustomText
           size={FontSize.smallMediumText}
           color={COLORS.greyText}

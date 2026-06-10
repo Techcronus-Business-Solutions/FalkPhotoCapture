@@ -103,7 +103,7 @@ const mergeAttachmentsIntoShipment = async (
     ...shipment,
     sharePointLinks: updatedLinks,
     status:
-      updatedLinks.length > 0 ? ('Uploaded' as const) : ('Pending' as const),
+      updatedLinks.length > 0 ? ('Uploaded' as const) : ('Ready to Ship' as const),
     photoCount: updatedLinks.length,
   };
 
@@ -122,9 +122,6 @@ const mergeAttachmentsIntoShipment = async (
   }
 };
 
-const escapeRegExp = (value: string): string =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
 const getHighestImageIndexForShipment = (
   shipmentNumber: string,
   pendingUploads: PendingUpload[],
@@ -134,29 +131,10 @@ const getHighestImageIndexForShipment = (
     s => s.bolNumber === shipmentNumber,
   );
 
-  const indices: number[] = [];
+  const serverImageCount = shipment?.sharePointLinks?.length ?? 0;
+  const pendingUploadCount = pendingUploads.length;
 
-  if (shipment?.sharePointLinks?.length) {
-    shipment.sharePointLinks.forEach(link => {
-      const match = link.fileName.match(
-        new RegExp(`^${escapeRegExp(shipmentNumber)}_(\\d+)\\.png$`, 'i'),
-      );
-      if (match) {
-        indices.push(Number(match[1]));
-      }
-    });
-  }
-
-  pendingUploads.forEach(upload => {
-    const match = upload.fileName.match(
-      new RegExp(`^${escapeRegExp(shipmentNumber)}_(\\d+)\\.png$`, 'i'),
-    );
-    if (match) {
-      indices.push(Number(match[1]));
-    }
-  });
-
-  return indices.length ? Math.max(...indices) : 0;
+  return serverImageCount + pendingUploadCount;
 };
 
 const getOfflineUploadBase64 = async (

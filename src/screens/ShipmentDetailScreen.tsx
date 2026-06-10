@@ -407,6 +407,23 @@ const ShipmentDetailScreen: React.FC<{
               {bolNumber}
             </CustomText>
           </View>
+
+          <CustomText
+            size={FontSize.normalText}
+            color={COLORS.primary}
+            style={{ marginTop: wp(4), fontFamily: FONTS.REGULAR }}
+          >
+            Sales Order
+          </CustomText>
+          <View style={styles.bolContainer}>
+            <CustomText
+              size={FontSize.largeText}
+              color={COLORS.primary}
+              style={{ fontFamily: FONTS.BOLD }}
+            >
+              {shipment.salesOrderNo}
+            </CustomText>
+          </View>
         </View>
 
         {/* Choose Photos */}

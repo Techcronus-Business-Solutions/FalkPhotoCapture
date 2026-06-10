@@ -1,5 +1,10 @@
 import React, { memo, useEffect, useState } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import FastImage, { type Source } from 'react-native-fast-image';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { COLORS, FontSize } from '../assets/constants';
@@ -26,9 +31,12 @@ const ImageCard: React.FC<ImageCardProps> = ({
 }) => {
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setHasError(false);
+    setLoading(false);
+    setErrorMessage(null);
   }, [uri]);
 
   const shouldShowPlaceholder = showPlaceholderOnError
@@ -59,8 +67,8 @@ const ImageCard: React.FC<ImageCardProps> = ({
   }
 
   const imageSource: Source = headers
-    ? { uri, headers, cache: FastImage.cacheControl.immutable }
-    : { uri, cache: FastImage.cacheControl.immutable };
+    ? { uri, headers, cache: FastImage.cacheControl.web }
+    : { uri, cache: FastImage.cacheControl.web };
 
   return (
     <View style={styles.container}>
@@ -68,13 +76,31 @@ const ImageCard: React.FC<ImageCardProps> = ({
         source={imageSource}
         style={styles.image}
         resizeMode={FastImage.resizeMode.cover}
+        onLoadStart={() => {
+          // start loader and reset any previous error state for this item
+          setLoading(true);
+          setHasError(false);
+          setErrorMessage(null);
+        }}
+        onLoad={() => {
+          setLoading(false);
+        }}
+        onLoadEnd={() => {
+          setLoading(false);
+        }}
         onError={() => {
-          if (showPlaceholderOnError) {
-            setErrorMessage('Image Not Available');
-            setHasError(true);
-          }
+          // always stop loader on error and mark this item errored so
+          // placeholder logic can pick it up when showPlaceholderOnError is true
+          setLoading(false);
+          setErrorMessage('Image Not Available');
+          setHasError(true);
         }}
       />
+      {loading ? (
+        <View style={styles.loaderContainer} pointerEvents="none">
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        </View>
+      ) : null}
       {onRemove ? (
         <TouchableOpacity
           onPress={onRemove}
@@ -111,6 +137,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  loaderContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.45)',
   },
   removeBtn: {
     position: 'absolute',

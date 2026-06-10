@@ -1,4 +1,4 @@
-export type ShipmentStatus = 'Pending' | 'Uploaded' | 'Offline';
+export type ShipmentStatus = 'Ready to Ship' | 'Uploaded' | 'Offline';
 
 export interface ShipmentSharePointLink {
   attachmentNo: number;
@@ -13,4 +13,5 @@ export interface Shipment {
   status: ShipmentStatus;
   photoCount: number;
   sharePointLinks: ShipmentSharePointLink[];
+  salesOrderNo?: string;
 }

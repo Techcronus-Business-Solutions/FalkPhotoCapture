@@ -40,7 +40,7 @@ const mapApiShipmentToShipment = (item: any): Shipment => {
     : [];
 
   const status: ShipmentStatus =
-    sharePointLinks.length > 0 ? 'Uploaded' : 'Pending';
+    sharePointLinks.length > 0 ? 'Uploaded' : 'Ready to Ship';
 
   return {
     id: String(item.id ?? item.no ?? ''),
@@ -49,6 +49,7 @@ const mapApiShipmentToShipment = (item: any): Shipment => {
     status,
     photoCount: sharePointLinks.length,
     sharePointLinks,
+    salesOrderNo: String(item.salesOrderNo ?? ''),
   };
 };
 

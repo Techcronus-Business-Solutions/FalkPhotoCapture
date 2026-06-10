@@ -76,7 +76,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         if (pendingCount === 0) {
           return {
             shipment,
-            displayStatus: sharePointCount > 0 ? 'Uploaded' : 'Pending',
+            displayStatus: sharePointCount > 0 ? 'Uploaded' : 'Ready to Ship',
           };
         }
 
