@@ -7,6 +7,7 @@ import CustomText from './CustomText';
 
 interface ImageCardProps {
   uri: string;
+  headers?: Record<string, string>;
   onRemove?: () => void;
   showPlaceholderOnError?: boolean;
   placeholderMessage?: string;
@@ -17,6 +18,7 @@ const IMAGE_SIZE = wp(28);
 
 const ImageCard: React.FC<ImageCardProps> = ({
   uri,
+  headers,
   onRemove,
   showPlaceholderOnError,
   placeholderMessage,
@@ -55,10 +57,12 @@ const ImageCard: React.FC<ImageCardProps> = ({
     );
   }
 
+  const imageSource = headers ? { uri, headers } : { uri };
+
   return (
     <View style={styles.container}>
       <Image
-        source={{ uri }}
+        source={imageSource}
         style={styles.image}
         resizeMode="cover"
         onError={() => {

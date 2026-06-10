@@ -10,6 +10,7 @@ export interface PhotoItem {
   pendingUploadId?: string;
   isServerImage?: boolean;
   isPlaceholder?: boolean;
+  headers?: Record<string, string>;
 }
 
 interface PhotoState {

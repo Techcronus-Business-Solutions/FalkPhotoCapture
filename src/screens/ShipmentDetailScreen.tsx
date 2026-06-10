@@ -28,6 +28,7 @@ import { usePhotoStore, type PhotoItem } from '../store/photoStore';
 import { useShipmentStore } from '../store/shipmentStore';
 import { useImagePicker } from '../hooks/useImagePicker';
 import { uploadService } from '../services/uploadService';
+import { getGraphAccessToken } from '../services/AccessTokenProvider';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { usePendingUploadsStore } from '../store/pendingUploadsStore';
 import type {
@@ -102,20 +103,68 @@ const ShipmentDetailScreen: React.FC<{
   }, [photos.length]);
 
   useEffect(() => {
-    if (!shipment?.sharePointLinks?.length) {
-      setServerPhotos([]);
-      return;
-    }
+    let isMounted = true;
 
-    setServerPhotos(
-      shipment.sharePointLinks.map(link => ({
-        id: `server-${shipmentId}-${link.attachmentNo}`,
-        uri: isConnected ? link.url1 : '',
-        fileName: link.fileName,
-        isServerImage: true,
-        isPlaceholder: !isConnected,
-      })) as PhotoItem[],
-    );
+    const buildServerPhotos = async () => {
+      if (!shipment?.sharePointLinks?.length) {
+        if (isMounted) {
+          setServerPhotos([]);
+        }
+        return;
+      }
+
+      if (!isConnected) {
+        if (isMounted) {
+          setServerPhotos(
+            shipment.sharePointLinks.map(link => ({
+              id: `server-${shipmentId}-${link.attachmentNo}`,
+              uri: '',
+              fileName: link.fileName,
+              isServerImage: true,
+              isPlaceholder: true,
+            })) as PhotoItem[],
+          );
+        }
+        return;
+      }
+
+      try {
+        const token = await getGraphAccessToken();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setServerPhotos(
+          shipment.sharePointLinks.map(link => ({
+            id: `server-${shipmentId}-${link.attachmentNo}`,
+            uri: link.url1,
+            headers: { Authorization: `Bearer ${token}` },
+            fileName: link.fileName,
+            isServerImage: true,
+            isPlaceholder: false,
+          })) as PhotoItem[],
+        );
+      } catch {
+        if (isMounted) {
+          setServerPhotos(
+            shipment.sharePointLinks.map(link => ({
+              id: `server-${shipmentId}-${link.attachmentNo}`,
+              uri: link.url1,
+              fileName: link.fileName,
+              isServerImage: true,
+              isPlaceholder: false,
+            })) as PhotoItem[],
+          );
+        }
+      }
+    };
+
+    buildServerPhotos();
+
+    return () => {
+      isMounted = false;
+    };
   }, [shipment, shipmentId, isConnected]);
 
   useEffect(() => {
@@ -281,11 +330,11 @@ const ShipmentDetailScreen: React.FC<{
       if (item.isServerImage) {
         // Server images are read-only. If offline, pass empty uri so
         // ImageCard shows the placeholder message 'Offline'. When online
-        // we pass the actual URL and ImageCard will show 'Image Not Available'
-        // if the URL fails to load.
+        // we pass the BC-provided Graph URL and token header.
         return (
           <ImageCard
             uri={isConnected ? item.uri : ''}
+            headers={isConnected ? item.headers : undefined}
             onRemove={undefined}
             showPlaceholderOnError
             placeholderMessage={isConnected ? undefined : 'Offline'}
