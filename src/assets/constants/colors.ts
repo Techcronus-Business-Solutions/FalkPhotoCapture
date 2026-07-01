@@ -5,6 +5,7 @@ export const COLORS = {
   pending: '#F59E0B',
   uploaded: '#1A9E5A',
   failed: '#E30235',
+  offline: '#E30235',
   greyText: '#6B7280',
   black: '#000000',
   overlay: 'rgba(0,0,0,0.5)',

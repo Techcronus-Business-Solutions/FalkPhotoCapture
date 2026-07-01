@@ -8,5 +8,5 @@ const BASE_URL = `https://api.businesscentral.dynamics.com/v2.0/${ENVIRONMENT}/a
 export const API_ROUTES = {
   LOGIN: `${BASE_URL}/driverLogin`,
   SHIPMENTS: `${BASE_URL}/postedSalesShipment`,
-  IMAGE_UPLOAD: `${BASE_URL}/image`,
+  IMAGE_UPLOAD: `${BASE_URL}/image?$expand=salesAttachment`,
 } as const;

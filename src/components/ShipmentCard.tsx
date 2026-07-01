@@ -5,66 +5,96 @@ import CustomText from './CustomText';
 import { COLORS, FONTS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import type { Shipment, ShipmentStatus } from '../types/shipment';
+import { usePendingUploadsStore } from '../store/pendingUploadsStore';
 
 const STATUS_COLORS: Record<ShipmentStatus, string> = {
-  Pending: COLORS.pending,
+  'Ready to Ship': COLORS.pending,
   Uploaded: COLORS.uploaded,
-  Failed: COLORS.failed,
+  Offline: COLORS.offline,
 };
 
 interface ShipmentCardProps {
   shipment: Shipment;
+  displayStatus?: ShipmentStatus;
   onPress: () => void;
 }
 
-const ShipmentCard: React.FC<ShipmentCardProps> = ({ shipment, onPress }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.card}>
-    <View style={styles.content}>
-      <CustomText
-        size={FontSize.normalLargeText}
-        color={COLORS.black}
-        style={{ fontFamily: FONTS.BOLD }}
-      >
-        {shipment.bolNumber}
-      </CustomText>
-      <CustomText
-        size={FontSize.smallMediumText}
-        color={COLORS.greyText}
-        style={styles.sub}
-      >
-        {shipment.date}
-        {shipment.photoCount > 0
-          ? `  •  ${shipment.photoCount} Photo${
-              shipment.photoCount !== 1 ? 's' : ''
-            }`
-          : ''}
-      </CustomText>
-    </View>
+const ShipmentCard: React.FC<ShipmentCardProps> = ({
+  shipment,
+  displayStatus,
+  onPress,
+}) => {
+  const status = displayStatus ?? shipment.status;
+  const sharePointCount =
+    (shipment as any)?.sharePointLinks?.length ?? shipment.photoCount ?? 0;
 
-    <View style={styles.right}>
-      <View
-        style={[
-          styles.badge,
-          { backgroundColor: STATUS_COLORS[shipment.status] },
-        ]}
-      >
+  const pendingCount = usePendingUploadsStore(
+    state =>
+      state.pendingUploads.filter(
+        u =>
+          u.shipmentNumber === shipment.bolNumber &&
+          u.uploadStatus === 'pending',
+      ).length,
+  );
+
+  let imageCount = sharePointCount;
+  if (shipment.status === 'Offline') {
+    imageCount = sharePointCount + pendingCount;
+  }
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.card}>
+      <View style={styles.content}>
         <CustomText
-          size={FontSize.tinyText}
-          color={COLORS.white}
-          style={{ fontFamily: FONTS.SEMIBOLD }}
+          size={FontSize.normalLargeText}
+          color={COLORS.black}
+          style={{ fontFamily: FONTS.BOLD }}
         >
-          {shipment.status}
+          {shipment.bolNumber}
+        </CustomText>
+
+        <CustomText
+          size={FontSize.smallMediumText}
+          color={COLORS.greyText}
+          style={styles.sub}
+        >
+          {`SO: ${shipment.salesOrderNo}`}
+        </CustomText>
+
+        <CustomText
+          size={FontSize.smallMediumText}
+          color={COLORS.greyText}
+          style={styles.sub}
+        >
+          {shipment.date}
+          {imageCount > 0
+            ? `  •  ${imageCount} Photo${imageCount !== 1 ? 's' : ''}`
+            : ''}
         </CustomText>
       </View>
-      <Ionicons
-        name="chevron-forward"
-        size={wp(6)} // icon size → rf
-        color={COLORS.greyText}
-        style={styles.chevron}
-      />
-    </View>
-  </TouchableOpacity>
-);
+
+      <View style={styles.right}>
+        <View
+          style={[styles.badge, { backgroundColor: STATUS_COLORS[status] }]}
+        >
+          <CustomText
+            size={FontSize.tinyText}
+            color={COLORS.white}
+            style={{ fontFamily: FONTS.SEMIBOLD }}
+          >
+            {status}
+          </CustomText>
+        </View>
+        <Ionicons
+          name="chevron-forward"
+          size={wp(6)} // icon size → rf
+          color={COLORS.greyText}
+          style={styles.chevron}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   card: {

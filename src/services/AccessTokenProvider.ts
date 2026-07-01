@@ -1,8 +1,5 @@
 import Config from 'react-native-config';
 
-let accessToken: string | null = null;
-let tokenExpireTime: number | null = null;
-
 const CLIENT_ID = Config.CLIENT_ID as string;
 const CLIENT_SECRET = Config.CLIENT_SECRET as string;
 
@@ -10,13 +7,18 @@ const TENANT_ID = Config.TENANT_ID as string;
 
 const ACCESS_TOKEN_URL = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`;
 
-const SCOPE = 'https://api.businesscentral.dynamics.com/.default';
+const DEFAULT_SCOPE = 'https://api.businesscentral.dynamics.com/.default';
+export const GRAPH_SCOPE = 'https://graph.microsoft.com/.default';
 
-export const getAccessToken = async (): Promise<string> => {
+const accessTokens = new Map<string, string>();
+const tokenExpireTimes = new Map<string, number>();
+
+const fetchTokenForScope = async (scope: string): Promise<string> => {
   try {
-    // Return existing token if still valid
-    if (accessToken && tokenExpireTime && Date.now() < tokenExpireTime) {
-      return accessToken;
+    const cachedToken = accessTokens.get(scope);
+    const expiry = tokenExpireTimes.get(scope);
+    if (cachedToken && expiry && Date.now() < expiry) {
+      return cachedToken;
     }
 
     const formBody = new URLSearchParams();
@@ -24,7 +26,7 @@ export const getAccessToken = async (): Promise<string> => {
     formBody.append('grant_type', 'client_credentials');
     formBody.append('client_id', CLIENT_ID);
     formBody.append('client_secret', CLIENT_SECRET);
-    formBody.append('scope', SCOPE);
+    formBody.append('scope', scope);
 
     const response = await fetch(ACCESS_TOKEN_URL, {
       method: 'POST',
@@ -44,14 +46,21 @@ export const getAccessToken = async (): Promise<string> => {
 
     const data = await response.json();
 
-    accessToken = data.access_token;
+    const token = data.access_token;
+    accessTokens.set(scope, token);
+    tokenExpireTimes.set(scope, Date.now() + (data.expires_in - 60) * 1000);
 
-    // Save token expiry time
-    tokenExpireTime = Date.now() + (data.expires_in - 60) * 1000;
-
-    return accessToken!;
+    return token;
   } catch (error) {
-    console.log('getAccessToken Error:', error);
+    console.log('fetchTokenForScope Error:', error);
     throw error;
   }
+};
+
+export const getAccessToken = async (): Promise<string> => {
+  return fetchTokenForScope(DEFAULT_SCOPE);
+};
+
+export const getGraphAccessToken = async (): Promise<string> => {
+  return fetchTokenForScope(GRAPH_SCOPE);
 };

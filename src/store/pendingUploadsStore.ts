@@ -5,7 +5,8 @@ export interface PendingUpload {
   id: string;
   shipmentNumber: string;
   fileName: string;
-  base64Image: string;
+  uri: string;
+  base64Image?: string;
   uploadStatus: 'pending' | 'completed';
 }
 
@@ -40,7 +41,10 @@ export const usePendingUploadsStore = create<PendingUploadsState>(
     },
 
     getPendingUploadsByShipment: (shipmentNumber: string) =>
-      get().pendingUploads.filter(u => u.shipmentNumber === shipmentNumber),
+      get().pendingUploads.filter(
+        u =>
+          u.shipmentNumber === shipmentNumber && u.uploadStatus === 'pending',
+      ),
 
     getAllPendingUploads: () => get().pendingUploads,
 

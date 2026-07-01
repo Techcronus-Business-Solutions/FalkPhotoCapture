@@ -1,8 +1,13 @@
 import { getAccessToken } from './AccessTokenProvider';
 import { API_ROUTES } from './ApiRoutes';
-import type { Shipment } from '../types/shipment';
+import { useAuthStore } from '../store/authStore';
+import type {
+  Shipment,
+  ShipmentSharePointLink,
+  ShipmentStatus,
+} from '../types/shipment';
 
-const SHIPMENTS_URL = API_ROUTES.SHIPMENTS;
+const SHIPMENTS_BASE_URL = API_ROUTES.SHIPMENTS;
 
 const formatShipmentDate = (rawDate: unknown): string => {
   const dateString =
@@ -23,19 +28,44 @@ const formatShipmentDate = (rawDate: unknown): string => {
   });
 };
 
-const mapApiShipmentToShipment = (item: any): Shipment => ({
-  id: String(item.id ?? item.no ?? ''),
-  bolNumber: String(item.no ?? ''),
-  date: formatShipmentDate(item.shipmentDate),
-  status: 'Pending',
-  photoCount: 0,
-});
+const mapApiShipmentToShipment = (item: any): Shipment => {
+  const sharePointLinks: ShipmentSharePointLink[] = Array.isArray(
+    item.sharePointLinks,
+  )
+    ? item.sharePointLinks.map((link: any) => ({
+        attachmentNo: Number(link.attachmentNo ?? 0),
+        url1: String(link.url1 ?? ''),
+        fileName: String(link.fileName ?? ''),
+      }))
+    : [];
+
+  const status: ShipmentStatus =
+    sharePointLinks.length > 0 ? 'Uploaded' : 'Ready to Ship';
+
+  return {
+    id: String(item.id ?? item.no ?? ''),
+    bolNumber: String(item.no ?? ''),
+    date: formatShipmentDate(item.shipmentDate),
+    status,
+    photoCount: sharePointLinks.length,
+    sharePointLinks,
+    salesOrderNo: String(item.salesOrderNo ?? ''),
+  };
+};
 
 export const shipmentService = {
   fetchShipments: async (): Promise<Shipment[]> => {
     const accessToken = await getAccessToken();
+    const driverID = useAuthStore.getState().user?.driverID;
 
-    const response = await fetch(SHIPMENTS_URL, {
+    // Build URL with query parameters
+    const url = new URL(SHIPMENTS_BASE_URL);
+    url.searchParams.append('$expand', 'sharePointLinks');
+    if (driverID) {
+      url.searchParams.append('$filter', `driver eq '${driverID}'`);
+    }
+
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -44,6 +74,7 @@ export const shipmentService = {
     });
 
     const responseText = await response.text();
+    console.log('Shipment API Response:', responseText);
 
     if (!response.ok) {
       const message =

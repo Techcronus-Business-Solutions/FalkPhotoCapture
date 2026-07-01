@@ -10,8 +10,20 @@ export type RootStackParamList = {
   };
 };
 
-export type LoginNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
-export type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
-export type ShipmentDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ShipmentDetail'>;
+export type LoginNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Login'
+>;
+export type DashboardNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Dashboard'
+>;
+export type ShipmentDetailNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'ShipmentDetail'
+>;
 
-export type ShipmentDetailRouteProp = RouteProp<RootStackParamList, 'ShipmentDetail'>;
+export type ShipmentDetailRouteProp = RouteProp<
+  RootStackParamList,
+  'ShipmentDetail'
+>;

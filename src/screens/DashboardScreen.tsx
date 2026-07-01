@@ -1,10 +1,18 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   FlatList,
   StyleSheet,
   RefreshControl,
   Alert,
+  Text,
+  TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -21,14 +29,16 @@ import { usePendingUploadsStore } from '../store/pendingUploadsStore';
 import { useAuthStore } from '../store/authStore';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import type { DashboardNavigationProp } from '../navigation/types';
-import type { Shipment } from '../types/shipment';
+import type { Shipment, ShipmentStatus } from '../types/shipment';
 import CustomInput from '../components/CustomInput';
+import { Camera } from 'react-native-camera-kit';
 
 const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   navigation,
 }) => {
   const [logoutVisible, setLogoutVisible] = useState(false);
   const insets = useSafeAreaInsets();
+  const [scannerVisible, setScannerVisible] = useState(false);
 
   const {
     shipments,
@@ -37,12 +47,72 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     isLoading,
     syncShipments,
     syncPendingUploads,
+    loadShipments,
     searchShipments,
   } = useShipmentStore();
   const logout = useAuthStore(state => state.logout);
   const { isConnected } = useNetworkStatus();
+  const pendingUploadEntries = usePendingUploadsStore(
+    state => state.pendingUploads,
+  );
+
+  const displayShipments = useMemo<
+    Array<{ shipment: Shipment; displayStatus: ShipmentStatus }>
+  >(
+    () =>
+      filteredShipments.map(shipment => {
+        const status = shipment.status;
+        if (status !== 'Offline') {
+          return { shipment, displayStatus: status };
+        }
+
+        const sharePointCount = shipment.sharePointLinks?.length ?? 0;
+        const pendingCount = pendingUploadEntries.filter(
+          upload =>
+            upload.shipmentNumber === shipment.bolNumber &&
+            upload.uploadStatus === 'pending',
+        ).length;
+
+        if (pendingCount === 0) {
+          return {
+            shipment,
+            displayStatus: sharePointCount > 0 ? 'Uploaded' : 'Ready to Ship',
+          };
+        }
+
+        return { shipment, displayStatus: 'Offline' };
+      }),
+    [filteredShipments, pendingUploadEntries],
+  );
+  const initialLoadRequestedRef = useRef(false);
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const isSyncingRef = useRef(false);
+  const wasConnectedRef = useRef(isConnected);
+
+  const handleReadCode = useCallback(
+    (event: { nativeEvent: { codeStringValue: string } }) => {
+      const codeStringValue = event.nativeEvent.codeStringValue;
+      if (!codeStringValue) {
+        return;
+      }
+
+      console.log('BarcodeScanner scanned value:', codeStringValue);
+      Toast.show({
+        type: 'info',
+        text1: 'BarcodeScanner scanned value',
+        text2: codeStringValue,
+      });
+
+      setTimeout(() => {
+        setScannerVisible(false);
+      }, 800);
+    },
+    [],
+  );
 
   const handleSync = useCallback(async () => {
+    if (isSyncingRef.current) return;
     if (!isConnected) {
       Toast.show({
         type: 'error',
@@ -51,7 +121,9 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       });
       return;
     }
-
+    // immediate guard to prevent double-starts (double-tap or concurrent calls)
+    isSyncingRef.current = true;
+    setIsSyncing(true);
     try {
       await syncPendingUploads();
 
@@ -72,16 +144,71 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Sync failed',
+        text1: 'Sync Error',
         text2:
           error instanceof Error
             ? error.message
             : 'Unable to sync uploads. Please try again.',
       });
+    } finally {
+      isSyncingRef.current = false;
+      setIsSyncing(false);
     }
   }, [isConnected, syncShipments, syncPendingUploads]);
 
   useEffect(() => {
+    loadShipments().catch(() => {
+      /* ignore cached load errors */
+    });
+  }, [loadShipments]);
+
+  useEffect(() => {
+    const wasConnected = wasConnectedRef.current;
+    wasConnectedRef.current = isConnected;
+    const pendingCount =
+      usePendingUploadsStore.getState().pendingUploads.length;
+
+    if (!wasConnected && isConnected && pendingCount > 0) {
+      const uploadOfflineData = async () => {
+        if (isSyncingRef.current) return;
+
+        isSyncingRef.current = true;
+        setIsSyncing(true);
+
+        try {
+          await syncPendingUploads();
+
+          Toast.show({
+            type: 'success',
+            text1: 'Offline Data Synced',
+            text2: 'Pending offline uploads were delivered successfully.',
+          });
+        } catch (error) {
+          Toast.show({
+            type: 'error',
+            text1: 'Sync Error',
+            text2:
+              error instanceof Error
+                ? error.message
+                : 'Unable to sync offline uploads. Please try again.',
+          });
+        } finally {
+          isSyncingRef.current = false;
+          setIsSyncing(false);
+        }
+      };
+
+      uploadOfflineData();
+    }
+  }, [isConnected, syncPendingUploads]);
+
+  useEffect(() => {
+    if (initialLoadRequestedRef.current) {
+      return;
+    }
+
+    initialLoadRequestedRef.current = true;
+
     if (!isConnected) {
       return;
     }
@@ -89,29 +216,25 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     syncShipments().catch(() => {
       /* ignore initial fetch errors; user can pull to refresh */
     });
-
-    syncPendingUploads().catch(() => {
-      /* ignore sync errors; user can pull to refresh */
-    });
-  }, [isConnected, syncShipments, syncPendingUploads]);
+  }, [isConnected, syncShipments]);
 
   const handleLogout = useCallback(() => {
-    // Check for failed shipments or pending uploads before logging out
-    const hasFailedShipment = shipments.some(s => s.status === 'Failed');
-    const pendingUploads = usePendingUploadsStore
+    // Check for offline shipments or pending uploads before logging out
+    const hasOfflineShipment = shipments.some(s => s.status === 'Offline');
+    const allPendingUploads = usePendingUploadsStore
       .getState()
       .getAllPendingUploads();
-    const hasPendingUploads = pendingUploads.length > 0;
+    const hasPendingUploads = allPendingUploads.length > 0;
 
     const proceedLogout = async () => {
       setLogoutVisible(false);
       await logout();
     };
 
-    if (hasFailedShipment || hasPendingUploads) {
+    if (hasOfflineShipment || hasPendingUploads) {
       Alert.alert(
         'Warning',
-        'There are failed shipments or pending uploads. If you logout now, syncing will stop. Do you want to continue?',
+        'There are offline shipments or pending uploads. If you logout now, syncing will stop. Do you want to continue?',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Logout', style: 'destructive', onPress: proceedLogout },
@@ -125,21 +248,31 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   }, [shipments, logout]);
 
   const renderItem = useCallback(
-    ({ item }: { item: Shipment }) => (
+    ({
+      item,
+    }: {
+      item: { shipment: Shipment; displayStatus: ShipmentStatus };
+    }) => (
       <ShipmentCard
-        shipment={item}
+        shipment={item.shipment}
+        displayStatus={item.displayStatus}
         onPress={() =>
+          // Prevent navigation while a sync/refresh is in progress
+          !(isLoading || isSyncing) &&
           navigation.navigate('ShipmentDetail', {
-            shipmentId: item.id,
-            bolNumber: item.bolNumber,
+            shipmentId: item.shipment.id,
+            bolNumber: item.shipment.bolNumber,
           })
         }
       />
     ),
-    [navigation],
+    [navigation, isLoading, isSyncing],
   );
 
-  const keyExtractor = useCallback((item: Shipment) => item.id, []);
+  const keyExtractor = useCallback(
+    (item: { shipment: Shipment }) => item.shipment.id,
+    [],
+  );
 
   return (
     <View style={styles.root}>
@@ -147,12 +280,14 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         title="Dashboard"
         leftIconName="log-out-outline"
         onLeftPress={() => setLogoutVisible(true)}
+        rightIconName="barcode-outline"
+        onRightPress={() => setScannerVisible(true)}
       />
 
       {!isConnected && (
         <View style={styles.offlineBanner}>
           <CustomText size={FontSize.smallMediumText} color={COLORS.white}>
-            You are offline. Changes will sync when connected.
+            You are offline.
           </CustomText>
         </View>
       )}
@@ -162,6 +297,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
           placeholder="Search by BoL / Shipment No..."
           value={searchQuery}
           onChangeText={searchShipments}
+          editable={!isLoading && !isSyncing}
           leftIconName="search-outline"
           returnKeyType="next"
           autoComplete="username"
@@ -178,7 +314,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       </CustomText>
 
       <FlatList
-        data={filteredShipments}
+        data={displayShipments}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         contentContainerStyle={[
@@ -188,7 +324,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <EmptyView
-            message={isLoading ? 'Loading shipments...' : 'No shipments found.'}
+            message={isLoading ? 'Syncing...' : 'No shipments found.'}
             iconName="cube-outline"
           />
         }
@@ -198,6 +334,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
             onRefresh={handleSync}
             tintColor={COLORS.primary}
             colors={[COLORS.primary]}
+            title="Syncing..."
           />
         }
       />
@@ -211,15 +348,45 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         <CustomButton
           title="Sync Now"
           onPress={handleSync}
-          loading={isLoading}
+          loading={isLoading || isSyncing}
+          disabled={isLoading || isSyncing}
         />
       </View>
+
+      {/* Interaction blocker while syncing/refreshing */}
+      {(isLoading || isSyncing) && (
+        <View style={styles.interactionBlocker} pointerEvents="none" />
+      )}
 
       <LogoutModal
         visible={logoutVisible}
         onCancel={() => setLogoutVisible(false)}
         onConfirm={handleLogout}
       />
+      {scannerVisible && (
+        <View style={styles.modalBackdrop}>
+          <View style={styles.scannerPopup}>
+            <Camera
+              style={styles.camera}
+              scanBarcode
+              showFrame
+              laserColor={COLORS.white}
+              frameColor={COLORS.primary}
+              ratioOverlay="1:1"
+              ratioOverlayColor="rgba(0,0,0,0.5)"
+              onReadCode={handleReadCode}
+            />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setScannerVisible(false);
+              }}
+            >
+              <Text style={styles.closeText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -230,7 +397,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   offlineBanner: {
-    backgroundColor: COLORS.failed,
+    backgroundColor: COLORS.offline,
     alignItems: 'center',
     paddingVertical: wp(2), // vertical padding → hp
     paddingHorizontal: wp(4), // horizontal padding → wp
@@ -238,6 +405,39 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: wp(4), // horizontal padding → wp
     paddingVertical: wp(5), // vertical padding → hp
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+    elevation: 20,
+  },
+  scannerPopup: {
+    width: '90%',
+    height: wp(50), // make it a square based on screen width
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: COLORS.black,
+  },
+  camera: {
+    flex: 1,
+  },
+
+  closeButton: {
+    paddingVertical: wp(3),
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+  },
+  closeText: {
+    color: COLORS.white,
+    fontSize: FontSize.normalText,
+    fontFamily: FONTS.BOLD,
   },
 
   list: {},
@@ -249,6 +449,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     paddingHorizontal: wp(4), // horizontal padding → wp
     paddingTop: wp(2), // vertical padding → hp
+  },
+  interactionBlocker: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0)',
+    zIndex: 999,
   },
 });
 
