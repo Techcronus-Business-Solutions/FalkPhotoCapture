@@ -157,6 +157,13 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   }, [isConnected, syncShipments, syncPendingUploads]);
 
   useEffect(() => {
+    usePendingUploadsStore
+      .getState()
+      .loadPendingUploads()
+      .catch(() => {
+        /* ignore pending upload hydration errors */
+      });
+
     loadShipments().catch(() => {
       /* ignore cached load errors */
     });

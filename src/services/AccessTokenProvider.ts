@@ -21,6 +21,8 @@ const fetchTokenForScope = async (scope: string): Promise<string> => {
       return cachedToken;
     }
 
+    /*
+    // Original API - commented for offline demo
     const formBody = new URLSearchParams();
 
     formBody.append('grant_type', 'client_credentials');
@@ -51,6 +53,13 @@ const fetchTokenForScope = async (scope: string): Promise<string> => {
     tokenExpireTimes.set(scope, Date.now() + (data.expires_in - 60) * 1000);
 
     return token;
+    */
+
+    const mockToken = `offline-demo-token-for-${scope}`;
+    accessTokens.set(scope, mockToken);
+    tokenExpireTimes.set(scope, Date.now() + 60 * 60 * 1000);
+
+    return mockToken;
   } catch (error) {
     console.log('fetchTokenForScope Error:', error);
     throw error;

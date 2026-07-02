@@ -27,6 +27,8 @@ export const authService = {
 
     const accessToken = await getAccessToken();
 
+    /*
+    // Original API - commented for offline demo
     const response = await fetch(LOGIN_URL, {
       method: 'POST',
       headers: {
@@ -61,6 +63,15 @@ export const authService = {
       driverID: data.driverID,
       name: data.name,
       message: data.message,
+    };
+    */
+
+    return {
+      token: accessToken,
+      username,
+      driverID: 'DEMO-DRIVER',
+      name: 'Offline Demo Driver',
+      message: 'Offline demo login successful.',
     };
   },
 };

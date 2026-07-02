@@ -32,6 +32,8 @@ const uploadImagesToServer = async (
       salesAttachment: attachments,
     };
 
+    /*
+    // Original API - commented for offline demo
     const response = await fetch(API_ROUTES.IMAGE_UPLOAD, {
       method: 'POST',
       headers: {
@@ -52,6 +54,21 @@ const uploadImagesToServer = async (
     const json = await response.json();
     // Expecting { salesAttachment: [...] }
     return Array.isArray(json?.salesAttachment) ? json.salesAttachment : [];
+    */
+
+    console.log(
+      'Offline demo: simulated upload response for',
+      attachments.length,
+      'image(s).',
+    );
+    return attachments.map((attachment, index) => ({
+      ...attachment,
+      url1:
+        attachment.url1 ??
+        `https://offline-demo.local/${
+          attachment.fileName ?? `image-${index + 1}`
+        }`,
+    }));
   } catch (error) {
     throw error;
   }
@@ -103,7 +120,9 @@ const mergeAttachmentsIntoShipment = async (
     ...shipment,
     sharePointLinks: updatedLinks,
     status:
-      updatedLinks.length > 0 ? ('Uploaded' as const) : ('Ready to Ship' as const),
+      updatedLinks.length > 0
+        ? ('Uploaded' as const)
+        : ('Ready to Ship' as const),
     photoCount: updatedLinks.length,
   };
 

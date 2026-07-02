@@ -104,6 +104,15 @@ const ShipmentDetailScreen: React.FC<{
   }, [photos.length]);
 
   useEffect(() => {
+    usePendingUploadsStore
+      .getState()
+      .loadPendingUploads()
+      .catch(() => {
+        /* ignore pending upload hydration errors */
+      });
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
 
     const buildServerPhotos = async () => {
@@ -251,59 +260,25 @@ const ShipmentDetailScreen: React.FC<{
       uploadingRef.current = true;
       setUploading(true);
 
-      if (isConnected) {
-        let totalUploadedCount = 0;
-
-        if (pendingUploads?.length) {
-          const pendingResult =
-            await uploadService.uploadPendingUploadsForShipment(
-              shipmentId,
-              bolNumber,
-              pendingUploads,
-            );
-          totalUploadedCount += pendingResult.uploadedCount;
-        }
-
-        if (photos.length) {
-          const result = await uploadService.uploadPhotos(
-            shipmentId,
-            bolNumber,
-            photos,
-          );
-          totalUploadedCount += result.uploadedCount;
-        }
-
-        // shipmentStore is updated by uploadService.mergeAttachmentsIntoShipment
-        // which preserves existing sharePointLinks and recalculates photoCount.
-        // Avoid overriding photoCount here with only the current upload count.
-        await clearPhotos(shipmentId);
-        Toast.show({
-          type: 'success',
-          text1: 'Upload Successful',
-          text2: `${totalUploadedCount} photo(s) uploaded successfully.`,
-        });
-        navigation.goBack();
-      } else {
-        if (!photos.length) {
-          Toast.show({
-            type: 'info',
-            text1: 'Offline Mode',
-            text2:
-              'Images are already saved locally and will sync when online.',
-          });
-          return;
-        }
-
-        await uploadService.uploadPhotosOffline(shipmentId, bolNumber, photos);
-        updateShipmentStatus(shipmentId, 'Offline');
-        await clearPhotos(shipmentId);
+      if (!photos.length) {
         Toast.show({
           type: 'info',
           text1: 'Offline Mode',
-          text2: 'Images saved locally. Will sync when online.',
+          text2: 'Images are already saved locally and will appear on reopen.',
         });
-        navigation.goBack();
+        return;
       }
+
+      await uploadService.uploadPhotosOffline(shipmentId, bolNumber, photos);
+      updateShipmentStatus(shipmentId, 'Offline');
+      await clearPhotos(shipmentId);
+      Toast.show({
+        type: 'info',
+        text1: 'Offline Mode',
+        text2:
+          'Images saved locally. They will appear when this record is reopened.',
+      });
+      navigation.goBack();
     } catch (err: unknown) {
       updateShipmentStatus(shipmentId, 'Offline');
       Toast.show({
@@ -320,7 +295,6 @@ const ShipmentDetailScreen: React.FC<{
     pendingUploads,
     shipmentId,
     bolNumber,
-    isConnected,
     updateShipmentStatus,
     navigation,
     clearPhotos,

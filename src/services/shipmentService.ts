@@ -40,7 +40,12 @@ const mapApiShipmentToShipment = (item: any): Shipment => {
     : [];
 
   const status: ShipmentStatus =
-    sharePointLinks.length > 0 ? 'Uploaded' : 'Ready to Ship';
+    typeof item?.status === 'string' &&
+    ['Ready to Ship', 'Uploaded', 'Offline'].includes(item.status)
+      ? (item.status as ShipmentStatus)
+      : sharePointLinks.length > 0
+      ? 'Uploaded'
+      : 'Ready to Ship';
 
   return {
     id: String(item.id ?? item.no ?? ''),
@@ -65,6 +70,8 @@ export const shipmentService = {
       url.searchParams.append('$filter', `driver eq '${driverID}'`);
     }
 
+    /*
+    // Original API - commented for offline demo
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
@@ -94,5 +101,35 @@ export const shipmentService = {
     }
 
     return data.value.map(mapApiShipmentToShipment);
+    */
+
+    const mockShipments = [
+      {
+        id: 'SHIP-1001',
+        no: 'BOL-1001',
+        shipmentDate: '2026-07-01T00:00:00Z',
+        salesOrderNo: 'SO-1001',
+        status: 'Ready to Ship' as ShipmentStatus,
+        sharePointLinks: [],
+      },
+      {
+        id: 'SHIP-1002',
+        no: 'BOL-1002',
+        shipmentDate: '2026-07-02T00:00:00Z',
+        salesOrderNo: 'SO-1002',
+        status: 'Ready to Ship' as ShipmentStatus,
+        sharePointLinks: [],
+      },
+      {
+        id: 'SHIP-1003',
+        no: 'BOL-1003',
+        shipmentDate: '2026-07-03T00:00:00Z',
+        salesOrderNo: 'SO-1003',
+        status: 'Ready to Ship' as ShipmentStatus,
+        sharePointLinks: [],
+      },
+    ];
+
+    return mockShipments.map(mapApiShipmentToShipment);
   },
 };
