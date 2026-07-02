@@ -16,6 +16,7 @@ import { COLORS } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import authService from '../services/authService';
 import { useAuthStore } from '../store/authStore';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { FontSize } from '../assets/constants';
 import AppLogo from '../assets/images/logo-blue.svg';
 import { FONTS } from '../assets/constants';
@@ -26,6 +27,7 @@ const LoginScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const passwordRef = useRef<RNTextInput>(null);
   const login = useAuthStore(state => state.login);
+  const { isConnected } = useNetworkStatus();
   const insets = useSafeAreaInsets();
 
   const handleLogin = useCallback(async () => {
@@ -37,10 +39,29 @@ const LoginScreen: React.FC = () => {
       });
       return;
     }
+
+    if (!isConnected) {
+      Toast.show({
+        type: 'error',
+        text1: 'No Internet',
+        text2: 'Please check your internet connection.',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       const result = await authService.login({ username, password });
-      await login({ username: result.username, token: result.token });
+      await login({
+        username: result.username,
+        token: result.token,
+        driverID: result.driverID,
+      });
+      Toast.show({
+        type: 'success',
+        text1: 'Login Successful',
+        text2: result.message || 'You are now logged in.',
+      });
     } catch (err: unknown) {
       Toast.show({
         type: 'error',
@@ -50,7 +71,7 @@ const LoginScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [username, password, login]);
+  }, [username, password, login, isConnected]);
 
   return (
     <View style={styles.container}>

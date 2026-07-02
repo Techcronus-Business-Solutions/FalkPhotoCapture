@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const KEYS = {
   AUTH_USER: '@falk/auth_user',
   PHOTOS: '@falk/photos',
+  SHIPMENTS: '@falk/shipments',
+  PENDING_UPLOADS: '@falk/pending_uploads',
 } as const;
 
 export const storage = {
