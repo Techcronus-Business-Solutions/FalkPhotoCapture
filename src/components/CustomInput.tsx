@@ -69,12 +69,13 @@ const styles = StyleSheet.create({
     borderWidth: wp(0.5), // border width → wp
     borderColor: COLORS.border,
     paddingHorizontal: wp(3), // horizontal padding → wp
-    height: wp(12), // height → hp
+    height: wp(11), // height → hp
   },
   leftIcon: {
     marginRight: wp(2), // horizontal margin → wp
   },
   input: {
+    paddingVertical: 0,
     flex: 1,
     fontFamily: FONTS.REGULAR,
     fontSize: FontSize.normalLargeText, // font size → rf

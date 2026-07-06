@@ -10,7 +10,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import CustomText from '../components/CustomText';
-import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
 import { COLORS } from '../assets/constants';
 import { wp } from '../utils/responsive';
@@ -20,6 +19,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { FontSize } from '../assets/constants';
 import AppLogo from '../assets/images/logo-blue.svg';
 import { FONTS } from '../assets/constants';
+import CustomInput2 from '../components/CustomInput2';
 
 const LoginScreen: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -114,22 +114,22 @@ const LoginScreen: React.FC = () => {
 
           {/* Form card */}
           <View style={{ marginTop: wp(5) }}>
-            <CustomInput
+            <CustomInput2
+              label="Username"
               placeholder="Username"
               value={username}
               onChangeText={setUsername}
-              leftIconName="person-outline"
               returnKeyType="next"
               autoComplete="username"
               onSubmitEditing={() => passwordRef.current?.focus()}
             />
-            <CustomInput
+            <CustomInput2
+              label="Password"
               // @ts-ignore — ref forwarding handled internally
               ref={passwordRef}
               placeholder="Password"
               value={password}
               onChangeText={setPassword}
-              leftIconName="lock-closed-outline"
               isPassword
               returnKeyType="done"
               onSubmitEditing={handleLogin}
@@ -189,9 +189,7 @@ const styles = StyleSheet.create({
     borderRadius: wp(8), // radius → rf
     padding: wp(5), // uniform card padding → wp
   },
-  passwordInput: {
-    marginTop: wp(5), // vertical margin → hp
-  },
+  passwordInput: {},
   loginBtn: {
     marginTop: wp(5), // vertical margin → hp
   },
