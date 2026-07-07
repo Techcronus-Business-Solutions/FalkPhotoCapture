@@ -14,6 +14,7 @@ import {
   Text,
   TouchableOpacity,
 } from 'react-native';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import Header from '../components/Header';
@@ -299,6 +300,32 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         </View>
       )}
 
+      <View style={styles.welcomeContainer}>
+        <View style={styles.welcomeIconWrapper}>
+          <Ionicons
+            name="person-circle-outline"
+            size={wp(8)}
+            color={COLORS.primary}
+          />
+        </View>
+        <View style={styles.welcomeTextWrapper}>
+          <CustomText
+            size={FontSize.normalLargeText}
+            color={COLORS.primary}
+            style={{ fontFamily: FONTS.SEMIBOLD }}
+          >
+            Welcome, John
+          </CustomText>
+          <CustomText
+            size={FontSize.smallMediumText}
+            color={COLORS.greyText}
+            style={{ marginTop: wp(1) }}
+          >
+            Driver
+          </CustomText>
+        </View>
+      </View>
+
       <View style={styles.searchContainer}>
         <CustomInput
           placeholder="Search by BoL / Shipment No..."
@@ -408,6 +435,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: wp(2), // vertical padding → hp
     paddingHorizontal: wp(4), // horizontal padding → wp
+  },
+  welcomeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: wp(4), // horizontal padding → wp
+    paddingVertical: wp(3),
+    marginHorizontal: wp(4),
+    marginTop: wp(4),
+    borderRadius: wp(4),
+    backgroundColor: '#EFF3FD',
+  },
+  welcomeIconWrapper: {
+    width: wp(12),
+    height: wp(12),
+    borderRadius: wp(12),
+    backgroundColor: '#DDEBFD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: wp(3),
+  },
+  welcomeTextWrapper: {
+    flex: 1,
   },
   searchContainer: {
     paddingHorizontal: wp(4), // horizontal padding → wp
