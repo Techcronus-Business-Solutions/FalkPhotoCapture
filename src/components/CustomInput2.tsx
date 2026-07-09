@@ -4,10 +4,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Text,
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
+import CustomText from './CustomText';
 import Ionicons, {
   type IoniconsIconName,
 } from '@react-native-vector-icons/ionicons';
@@ -16,12 +16,17 @@ import { wp } from '../utils/responsive';
 
 interface CustomInputProps extends TextInputProps {
   leftIconName?: IoniconsIconName;
+  rightIconName?: IoniconsIconName;
+  onRightPress?: () => void;
   isPassword?: boolean;
   containerStyle?: ViewStyle;
   label?: string;
 }
 
 const CustomInput2: React.FC<CustomInputProps> = ({
+  leftIconName,
+  rightIconName,
+  onRightPress,
   isPassword = false,
   containerStyle,
   label,
@@ -33,31 +38,33 @@ const CustomInput2: React.FC<CustomInputProps> = ({
     <View style={styles.wrapper}>
       {label && (
         <View style={styles.labelContainer}>
-          <Text style={styles.label}>{label}</Text>
+          <CustomText size={FontSize.normalText} color={COLORS.greyText} weight="regular">{label}</CustomText>
         </View>
       )}
 
       <View style={[styles.container, containerStyle]}>
-        {/* {leftIconName && (
+        {leftIconName && (
           <Ionicons
             name={leftIconName}
             size={wp(5)}
             color={COLORS.primary}
             style={styles.leftIcon}
           />
-        )} */}
+        )}
 
         <TextInput
           style={styles.input}
+          placeholderTextColor={COLORS.greyText}
           secureTextEntry={isPassword && !showPassword}
           autoCapitalize="none"
           {...props}
         />
 
-        {isPassword && (
+        {isPassword ? (
           <TouchableOpacity
             onPress={() => setShowPassword(v => !v)}
             style={styles.rightIcon}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -65,6 +72,20 @@ const CustomInput2: React.FC<CustomInputProps> = ({
               color={COLORS.primary}
             />
           </TouchableOpacity>
+        ) : (
+          rightIconName && (
+            <TouchableOpacity
+              onPress={onRightPress}
+              style={styles.rightIcon}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={rightIconName}
+                size={wp(5)}
+                color={COLORS.primary}
+              />
+            </TouchableOpacity>
+          )
         )}
       </View>
     </View>
@@ -79,7 +100,7 @@ const styles = StyleSheet.create({
     borderWidth: wp(0.5), // border width → wp
     borderColor: COLORS.border,
     paddingHorizontal: wp(3), // horizontal padding → wp
-    height: wp(11), // height → hp
+    height: wp(12), // height → hp
     backgroundColor: COLORS.white,
   },
   leftIcon: {
@@ -109,11 +130,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
 
-  label: {
-    fontSize: FontSize.normalText,
-    color: COLORS.greyText,
-    fontFamily: FONTS.REGULAR,
-  },
 });
 
 export default memo(CustomInput2);

@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { Text, type TextProps, type TextStyle } from 'react-native';
 import { rf } from '../utils/responsive';
-import { COLORS } from '../assets/constants';
+import { COLORS, FONTS } from '../assets/constants';
 
 type FontWeight = 'regular' | 'medium' | 'semibold' | 'bold';
 
@@ -12,9 +12,17 @@ interface CustomTextProps extends TextProps {
   style?: TextStyle | TextStyle[];
 }
 
+const FONT_FAMILY_MAP: Record<FontWeight, string> = {
+  regular: FONTS.REGULAR,
+  medium: FONTS.MEDIUM,
+  semibold: FONTS.SEMIBOLD,
+  bold: FONTS.BOLD,
+};
+
 const CustomText: React.FC<CustomTextProps> = ({
   size = 14,
   color = COLORS.black,
+  weight = 'regular',
   style,
   children,
   ...props
@@ -24,6 +32,7 @@ const CustomText: React.FC<CustomTextProps> = ({
       {
         fontSize: rf(size),
         color,
+        fontFamily: FONT_FAMILY_MAP[weight],
       },
       style,
     ]}

@@ -6,12 +6,15 @@ import ModuleOptionCard from '../components/ModuleOptionCard';
 import CustomText from '../components/CustomText';
 import CustomButton from '../components/CustomButton';
 import LogoutModal from '../components/LogoutModal';
-import { COLORS, FONTS, FontSize } from '../assets/constants';
+import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useAuthStore } from '../store/authStore';
+import type { ManagerDashboardNavigationProp } from '../navigation/types';
 
-const ManagerDashboard: React.FC = () => {
+const ManagerDashboard: React.FC<{
+  navigation: ManagerDashboardNavigationProp;
+}> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState('shipping');
   const [logoutVisible, setLogoutVisible] = useState(false);
@@ -47,7 +50,7 @@ const ManagerDashboard: React.FC = () => {
           <CustomText
             size={FontSize.normalLargeText}
             color={COLORS.primary}
-            style={{ fontFamily: FONTS.SEMIBOLD }}
+            weight="semibold"
           >
             Welcome, John
           </CustomText>
@@ -65,14 +68,19 @@ const ManagerDashboard: React.FC = () => {
         <CustomText
           size={FontSize.mediumLargeText}
           color={COLORS.black}
-          style={{ fontFamily: FONTS.SEMIBOLD, paddingHorizontal: wp(4) }}
+          weight="semibold"
+          style={{ paddingHorizontal: wp(4) }}
         >
           Select Module
         </CustomText>
         <CustomText
           size={FontSize.smallText}
           color={COLORS.greyText}
-          style={{ paddingHorizontal: wp(4), marginTop: wp(1),marginBottom: wp(2) }}
+          style={{
+            paddingHorizontal: wp(4),
+            marginTop: wp(1),
+            marginBottom: wp(2),
+          }}
         >
           Choose the dynamic logistics channel.
         </CustomText>
@@ -93,7 +101,9 @@ const ManagerDashboard: React.FC = () => {
         <CustomButton
           title="NEXT"
           onPress={() => {
-            /* navigate or action */
+            if (selected === 'shipping') {
+              navigation.navigate('ShippingManagement');
+            }
           }}
           style={styles.nextBtn}
         />

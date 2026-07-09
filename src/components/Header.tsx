@@ -5,7 +5,7 @@ import Ionicons, {
   type IoniconsIconName,
 } from '@react-native-vector-icons/ionicons';
 import CustomText from './CustomText';
-import { COLORS, FONTS, FontSize } from '../assets/constants';
+import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 
 interface HeaderProps {
@@ -45,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({
       <CustomText
         size={FontSize.mediumLargeText} // font size → rf
         color={COLORS.white}
-        weight="bold"
+        weight="semibold"
         numberOfLines={1}
         style={styles.title}
       >
@@ -87,7 +87,6 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     textAlign: 'center',
-    fontFamily: FONTS.SEMIBOLD,
     paddingVertical: wp(2), // horizontal padding → wp
   },
 });

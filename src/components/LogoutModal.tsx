@@ -3,7 +3,7 @@ import { Modal, View, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import CustomText from './CustomText';
 import CustomButton from './CustomButton';
-import { COLORS, FONTS, FontSize } from '../assets/constants';
+import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 
 interface LogoutModalProps {
@@ -40,6 +40,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({
         <CustomText
           size={FontSize.mediumLargeText}
           color={COLORS.primary}
+          weight="bold"
           style={styles.title}
         >
           Logout
@@ -47,6 +48,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({
         <CustomText
           size={FontSize.normalText}
           color={COLORS.greyText}
+          weight="regular"
           style={styles.message}
         >
           Are you sure you want to logout?
@@ -96,7 +98,6 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: wp(1), // vertical margin → hp
-    fontFamily: FONTS.BOLD,
     textAlign: 'center',
   },
   message: {

@@ -11,7 +11,6 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
-  Text,
   TouchableOpacity,
 } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -23,7 +22,7 @@ import CustomButton from '../components/CustomButton';
 import EmptyView from '../components/EmptyView';
 import LogoutModal from '../components/LogoutModal';
 import CustomText from '../components/CustomText';
-import { COLORS, FONTS, FontSize } from '../assets/constants';
+import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import { useShipmentStore } from '../store/shipmentStore';
 import { usePendingUploadsStore } from '../store/pendingUploadsStore';
@@ -312,7 +311,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
           <CustomText
             size={FontSize.normalLargeText}
             color={COLORS.primary}
-            style={{ fontFamily: FONTS.SEMIBOLD }}
+            weight="semibold"
           >
             Welcome, John
           </CustomText>
@@ -342,7 +341,8 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       <CustomText
         size={FontSize.normalLargeText}
         color={COLORS.black}
-        style={{ fontFamily: FONTS.BOLD, paddingHorizontal: wp(4) }} // horizontal margin → wp
+        weight="bold"
+        style={{ paddingHorizontal: wp(4) }}
       >
         Shipments
       </CustomText>
@@ -416,7 +416,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
                 setScannerVisible(false);
               }}
             >
-              <Text style={styles.closeText}>Close</Text>
+              <CustomText size={FontSize.normalText} color={COLORS.white} weight="bold">Close</CustomText>
             </TouchableOpacity>
           </View>
         </View>
@@ -490,12 +490,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.primary,
   },
-  closeText: {
-    color: COLORS.white,
-    fontSize: FontSize.normalText,
-    fontFamily: FONTS.BOLD,
-  },
-
   list: {},
   bottomBar: {
     position: 'absolute',

@@ -20,7 +20,6 @@ import { useAuthStore } from '../store/authStore';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { FontSize } from '../assets/constants';
 import AppLogo from '../assets/images/logo-blue.svg';
-import { FONTS } from '../assets/constants';
 import CustomInput2 from '../components/CustomInput2';
 import type { LoginNavigationProp } from '../navigation/types';
 
@@ -106,6 +105,7 @@ const LoginScreen: React.FC = () => {
             <CustomText
               size={FontSize.hugeText}
               color={COLORS.black}
+              weight="semibold"
               style={styles.logoSubtitle}
             >
               Login
@@ -123,7 +123,7 @@ const LoginScreen: React.FC = () => {
           <View style={{ marginTop: wp(5) }}>
             <CustomInput2
               label="Username"
-              placeholder="Username"
+              placeholder=""
               value={username}
               onChangeText={setUsername}
               returnKeyType="next"
@@ -134,7 +134,7 @@ const LoginScreen: React.FC = () => {
               label="Password"
               // @ts-ignore — ref forwarding handled internally
               ref={passwordRef}
-              placeholder="Password"
+              placeholder=""
               value={password}
               onChangeText={setPassword}
               isPassword
@@ -148,6 +148,7 @@ const LoginScreen: React.FC = () => {
               <CustomText
                 size={FontSize.smallMediumText}
                 color={COLORS.greyText}
+                weight="semibold"
                 style={styles.roleLabel}
               >
                 Login as
@@ -174,7 +175,7 @@ const LoginScreen: React.FC = () => {
                     <CustomText
                       size={FontSize.normalText}
                       color={COLORS.black}
-                      style={{ fontFamily: FONTS.MEDIUM }}
+                      weight="medium"
                     >
                       {item.label}
                     </CustomText>
@@ -222,14 +223,11 @@ const styles = StyleSheet.create({
   },
   logoSubtitle: {
     marginTop: wp(6), // vertical margin → hp
-    fontFamily: FONTS.SEMIBOLD,
   },
   tagline: {
     marginTop: wp(2), // vertical margin → hp
     textAlign: 'center',
     lineHeight: wp(6),
-
-    fontFamily: FONTS.REGULAR,
   },
   card: {
     backgroundColor: COLORS.white,
@@ -242,7 +240,6 @@ const styles = StyleSheet.create({
   },
   roleLabel: {
     marginBottom: wp(2),
-    fontFamily: FONTS.SEMIBOLD,
   },
   roleOptions: {
     flexDirection: 'row',
@@ -288,7 +285,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     alignSelf: 'center',
     fontSize: FontSize.normalText,
-    fontFamily: FONTS.REGULAR,
   },
 });
 

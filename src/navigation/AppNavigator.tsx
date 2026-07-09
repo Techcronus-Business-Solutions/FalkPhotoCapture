@@ -5,6 +5,7 @@ import LoginScreen from '../screens/LoginScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import ManagerDashboard from '../screens/ManagerDashboard';
 import ShipmentDetailScreen from '../screens/ShipmentDetailScreen';
+import ShippingManagementScreen from '../screens/ShippingManagementScreen';
 import { useAuthStore } from '../store/authStore';
 import type { RootStackParamList } from './types';
 
@@ -31,6 +32,10 @@ const AppNavigator: React.FC = () => {
             <Stack.Screen
               name="ManagerDashboard"
               component={ManagerDashboard}
+            />
+            <Stack.Screen
+              name="ShippingManagement"
+              component={ShippingManagementScreen}
             />
             <Stack.Screen
               name="ShipmentDetail"

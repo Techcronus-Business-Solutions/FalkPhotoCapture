@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import CustomText from './CustomText';
-import { COLORS, FONTS, FontSize } from '../assets/constants';
+import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 
 interface ModuleOptionCardProps {
@@ -27,7 +27,7 @@ const ModuleOptionCard: React.FC<ModuleOptionCardProps> = ({
         <CustomText
           size={FontSize.mediumText}
           color={selected ? COLORS.primary : COLORS.black}
-          style={{ fontFamily: FONTS.SEMIBOLD }}
+          weight="semibold"
         >
           {title}
         </CustomText>
@@ -35,6 +35,7 @@ const ModuleOptionCard: React.FC<ModuleOptionCardProps> = ({
           <CustomText
             size={FontSize.smallMediumText}
             color={COLORS.greyText}
+            weight="regular"
             style={{ marginTop: wp(1) }}
           >
             {subtitle}

@@ -15,12 +15,16 @@ import { wp } from '../utils/responsive';
 
 interface CustomInputProps extends TextInputProps {
   leftIconName?: IoniconsIconName;
+  rightIconName?: IoniconsIconName;
+  onRightPress?: () => void;
   isPassword?: boolean;
   containerStyle?: ViewStyle;
 }
 
 const CustomInput: React.FC<CustomInputProps> = ({
   leftIconName,
+  rightIconName,
+  onRightPress,
   isPassword = false,
   containerStyle,
   ...props
@@ -32,7 +36,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
       {leftIconName && (
         <Ionicons
           name={leftIconName}
-          size={wp(5)} // icon size → rf
+          size={wp(5)}
           color={COLORS.primary}
           style={styles.leftIcon}
         />
@@ -44,7 +48,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
         autoCapitalize="none"
         {...props}
       />
-      {isPassword && (
+      {isPassword ? (
         <TouchableOpacity
           onPress={() => setShowPassword(v => !v)}
           style={styles.rightIcon}
@@ -52,10 +56,24 @@ const CustomInput: React.FC<CustomInputProps> = ({
         >
           <Ionicons
             name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-            size={wp(5)} // icon size → rf
+            size={wp(5)}
             color={COLORS.primary}
           />
         </TouchableOpacity>
+      ) : (
+        rightIconName && (
+          <TouchableOpacity
+            onPress={onRightPress}
+            style={styles.rightIcon}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons
+              name={rightIconName}
+              size={wp(5)}
+              color={COLORS.primary}
+            />
+          </TouchableOpacity>
+        )
       )}
     </View>
   );
@@ -69,7 +87,7 @@ const styles = StyleSheet.create({
     borderWidth: wp(0.5), // border width → wp
     borderColor: COLORS.border,
     paddingHorizontal: wp(3), // horizontal padding → wp
-    height: wp(11), // height → hp
+    height: wp(12), // height → hp
   },
   leftIcon: {
     marginRight: wp(2), // horizontal margin → wp
