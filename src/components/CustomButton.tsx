@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import CustomText from './CustomText';
 import { COLORS, FONTS, FontSize } from '../assets/constants';
-import { rf, wp, hp } from '../utils/responsive';
+import { wp } from '../utils/responsive';
 
 type Variant = 'filled' | 'outline';
 

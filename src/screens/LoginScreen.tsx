@@ -5,8 +5,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
   type TextInput as RNTextInput,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import CustomText from '../components/CustomText';
@@ -20,15 +22,18 @@ import { FontSize } from '../assets/constants';
 import AppLogo from '../assets/images/logo-blue.svg';
 import { FONTS } from '../assets/constants';
 import CustomInput2 from '../components/CustomInput2';
+import type { LoginNavigationProp } from '../navigation/types';
 
 const LoginScreen: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'driver' | 'manager'>('driver');
   const [loading, setLoading] = useState(false);
   const passwordRef = useRef<RNTextInput>(null);
   const login = useAuthStore(state => state.login);
   const { isConnected } = useNetworkStatus();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<LoginNavigationProp>();
 
   const handleLogin = useCallback(async () => {
     if (!username.trim() || !password.trim()) {
@@ -55,6 +60,7 @@ const LoginScreen: React.FC = () => {
       await login({
         username: result.username,
         token: result.token,
+        role,
         driverID: result.driverID,
       });
       Toast.show({
@@ -62,6 +68,7 @@ const LoginScreen: React.FC = () => {
         text1: 'Login Successful',
         text2: result.message || 'You are now logged in.',
       });
+      navigation.replace(role === 'driver' ? 'Dashboard' : 'ManagerDashboard');
     } catch (err: unknown) {
       Toast.show({
         type: 'error',
@@ -71,7 +78,7 @@ const LoginScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [username, password, login, isConnected]);
+  }, [username, password, login, isConnected, navigation, role]);
 
   return (
     <View style={styles.container}>
@@ -136,6 +143,46 @@ const LoginScreen: React.FC = () => {
               autoComplete="password"
               containerStyle={styles.passwordInput}
             />
+
+            <View style={styles.roleWrapper}>
+              <CustomText
+                size={FontSize.smallMediumText}
+                color={COLORS.greyText}
+                style={styles.roleLabel}
+              >
+                Login as
+              </CustomText>
+              <View style={styles.roleOptions}>
+                {[
+                  { key: 'driver', label: 'Driver' },
+                  { key: 'manager', label: 'Manager' },
+                ].map(item => (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={styles.roleOption}
+                    onPress={() => setRole(item.key as 'driver' | 'manager')}
+                    activeOpacity={0.8}
+                  >
+                    <View
+                      style={[
+                        styles.radioOuter,
+                        role === item.key && styles.radioOuterSelected,
+                      ]}
+                    >
+                      {role === item.key && <View style={styles.radioInner} />}
+                    </View>
+                    <CustomText
+                      size={FontSize.normalText}
+                      color={COLORS.black}
+                      style={{ fontFamily: FONTS.MEDIUM }}
+                    >
+                      {item.label}
+                    </CustomText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
             <CustomButton
               title="Login"
               onPress={handleLogin}
@@ -190,6 +237,48 @@ const styles = StyleSheet.create({
     padding: wp(5), // uniform card padding → wp
   },
   passwordInput: {},
+  roleWrapper: {
+    marginBottom: wp(4),
+  },
+  roleLabel: {
+    marginBottom: wp(2),
+    fontFamily: FONTS.SEMIBOLD,
+  },
+  roleOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  roleOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: wp(3),
+    paddingHorizontal: wp(3),
+    borderRadius: wp(2),
+    borderWidth: wp(0.4),
+    borderColor: COLORS.border,
+    marginRight: wp(2),
+    backgroundColor: COLORS.white,
+  },
+  radioOuter: {
+    width: wp(5),
+    height: wp(5),
+    borderRadius: wp(5),
+    borderWidth: wp(0.8),
+    borderColor: COLORS.greyText,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: wp(2),
+  },
+  radioOuterSelected: {
+    borderColor: COLORS.primary,
+  },
+  radioInner: {
+    width: wp(2.5),
+    height: wp(2.5),
+    borderRadius: wp(2.5),
+    backgroundColor: COLORS.primary,
+  },
   loginBtn: {
     marginTop: wp(5), // vertical margin → hp
   },

@@ -4,6 +4,7 @@ import type { RouteProp } from '@react-navigation/native';
 export type RootStackParamList = {
   Login: undefined;
   Dashboard: undefined;
+  ManagerDashboard: undefined;
   ShipmentDetail: {
     shipmentId: string;
     bolNumber: string;
