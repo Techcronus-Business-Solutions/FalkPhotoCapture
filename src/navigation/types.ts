@@ -6,9 +6,13 @@ export type RootStackParamList = {
   Dashboard: undefined;
   ManagerDashboard: undefined;
   ShippingManagement: undefined;
+  ShippingDetails: undefined;
   ShipmentDetail: {
     shipmentId: string;
     bolNumber: string;
+  };
+  ScanType: {
+    csvNumber: string;
   };
 };
 
@@ -32,8 +36,17 @@ export type ShippingManagementNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'ShippingManagement'
 >;
+export type ShippingDetailsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'ShippingDetails'
+>;
+export type ScanTypeNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'ScanType'
+>;
 
 export type ShipmentDetailRouteProp = RouteProp<
   RootStackParamList,
   'ShipmentDetail'
 >;
+export type ScanTypeRouteProp = RouteProp<RootStackParamList, 'ScanType'>;

@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
-    backgroundColor: '#EFF3FD',
+    backgroundColor: COLORS.lightgray,
   },
   textWrapper: {
     flex: 1,

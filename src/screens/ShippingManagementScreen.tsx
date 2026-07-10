@@ -291,9 +291,14 @@ const ShippingManagementScreen: React.FC<{
           <TouchableOpacity
             activeOpacity={0.8}
             style={[styles.actionButton, styles.leftButton]}
-            onPress={() => {
-              /* preserve auxiliary action */
-            }}
+            onPress={() =>
+              navigation.navigate('ScanType', {
+                csvNumber:
+                  entryType === 'Panel'
+                    ? 'CSV - ' + csvNumber
+                    : 'Order - ' + orderNumber + ' | Box - ' + boxNumber,
+              })
+            }
           >
             <CustomText
               size={FontSize.normalText}
@@ -307,9 +312,7 @@ const ShippingManagementScreen: React.FC<{
           <TouchableOpacity
             activeOpacity={0.8}
             style={[styles.actionButton, styles.primaryAction]}
-            onPress={() => {
-              /* preserve auxiliary action */
-            }}
+            onPress={() => navigation.navigate('ShippingDetails')}
           >
             <CustomText
               size={FontSize.normalText}
@@ -447,7 +450,7 @@ const styles = StyleSheet.create({
     width: wp(12),
     height: wp(12),
     borderRadius: wp(3),
-    backgroundColor: '#EFF3FD',
+    backgroundColor: COLORS.lightgray,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: wp(3),
@@ -466,7 +469,7 @@ const styles = StyleSheet.create({
     width: wp(10),
     height: wp(10),
     borderRadius: wp(3),
-    backgroundColor: '#EFF3FD',
+    backgroundColor: COLORS.lightgray,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: wp(3),
@@ -492,7 +495,7 @@ const styles = StyleSheet.create({
     borderRadius: wp(2),
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#EFF3FD',
+    backgroundColor: COLORS.lightgray,
   },
   leftButton: {
     marginRight: wp(3),

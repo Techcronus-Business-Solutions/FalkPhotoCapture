@@ -416,7 +416,13 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
                 setScannerVisible(false);
               }}
             >
-              <CustomText size={FontSize.normalText} color={COLORS.white} weight="bold">Close</CustomText>
+              <CustomText
+                size={FontSize.normalText}
+                color={COLORS.white}
+                weight="bold"
+              >
+                Close
+              </CustomText>
             </TouchableOpacity>
           </View>
         </View>
@@ -444,13 +450,13 @@ const styles = StyleSheet.create({
     marginHorizontal: wp(4),
     marginTop: wp(4),
     borderRadius: wp(4),
-    backgroundColor: '#EFF3FD',
+    backgroundColor: COLORS.lightgray,
   },
   welcomeIconWrapper: {
     width: wp(12),
     height: wp(12),
     borderRadius: wp(12),
-    backgroundColor: '#DDEBFD',
+    backgroundColor: COLORS.lightBlue,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: wp(3),

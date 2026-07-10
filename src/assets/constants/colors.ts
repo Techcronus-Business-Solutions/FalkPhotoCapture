@@ -9,6 +9,8 @@ export const COLORS = {
   greyText: '#6B7280',
   black: '#000000',
   overlay: 'rgba(0,0,0,0.5)',
+  lightgray: '#EFF3FD',
+  lightBlue: '',
 } as const;
 
 export type ColorKey = keyof typeof COLORS;

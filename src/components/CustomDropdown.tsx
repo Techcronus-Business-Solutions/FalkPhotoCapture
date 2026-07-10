@@ -101,7 +101,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                 }}
               >
                 <CustomText
-                  size={FontSize.normalText}
+                  size={FontSize.normalLargeText}
                   color={COLORS.black}
                   weight="regular"
                 >
