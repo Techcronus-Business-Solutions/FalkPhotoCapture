@@ -56,7 +56,11 @@ const InfoRow: React.FC<{ label: string; value: string }> = ({
   value,
 }) => (
   <View style={styles.infoRow}>
-    <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+    <CustomText
+      size={FontSize.smallText}
+      color={COLORS.greyText}
+      weight="medium"
+    >
       {label}
     </CustomText>
     <CustomText
@@ -74,7 +78,11 @@ const SpecRow: React.FC<{ label: string; value: string }> = ({
   value,
 }) => (
   <View style={styles.specRow}>
-    <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+    <CustomText
+      size={FontSize.smallText}
+      color={COLORS.greyText}
+      weight="medium"
+    >
       {label}
     </CustomText>
     <CustomText
@@ -122,12 +130,19 @@ const ShippingDetailsScreen: React.FC<{
 
         {/* Shipping Info Card */}
         <View style={styles.infoCard}>
-          <InfoRow label="Shipping Details for CSV:" value={data.shippingDetails} />
+          <InfoRow
+            label="Shipping Details for CSV:"
+            value={data.shippingDetails}
+          />
           <InfoRow label="Project:" value={data.project} />
 
           <View style={styles.twoColRow}>
             <View style={styles.twoColItem}>
-              <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+              <CustomText
+                size={FontSize.smallText}
+                color={COLORS.greyText}
+                weight="medium"
+              >
                 Order #
               </CustomText>
               <CustomText
@@ -139,7 +154,11 @@ const ShippingDetailsScreen: React.FC<{
               </CustomText>
             </View>
             <View style={styles.twoColItem}>
-              <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+              <CustomText
+                size={FontSize.smallText}
+                color={COLORS.greyText}
+                weight="medium"
+              >
                 Customer Type:
               </CustomText>
               <CustomText
@@ -229,7 +248,7 @@ const ShippingDetailsScreen: React.FC<{
         <TouchableOpacity
           activeOpacity={0.8}
           style={styles.fulfillmentButton}
-          onPress={() => {}}
+          onPress={() => navigation.navigate('OrderFulfillment')}
         >
           <CustomText
             size={FontSize.normalLargeText}

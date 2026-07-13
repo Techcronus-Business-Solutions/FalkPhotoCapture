@@ -11,6 +11,7 @@ export const COLORS = {
   overlay: 'rgba(0,0,0,0.5)',
   lightgray: '#EFF3FD',
   lightBlue: '',
+  orange: '#F97316',
 } as const;
 
 export type ColorKey = keyof typeof COLORS;

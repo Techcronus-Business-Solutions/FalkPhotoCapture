@@ -14,6 +14,7 @@ export type RootStackParamList = {
   ScanType: {
     csvNumber: string;
   };
+  OrderFulfillment: undefined;
 };
 
 export type LoginNavigationProp = NativeStackNavigationProp<
@@ -50,3 +51,7 @@ export type ShipmentDetailRouteProp = RouteProp<
   'ShipmentDetail'
 >;
 export type ScanTypeRouteProp = RouteProp<RootStackParamList, 'ScanType'>;
+export type OrderFulfillmentNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'OrderFulfillment'
+>;
