@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import Header from '../components/Header';
@@ -43,8 +43,8 @@ interface TrimBoxItem {
 
 const ORDER_SUMMARY: OrderSummary = {
   orderNumber: '11241376',
-  csvCount: 4,
-  boxCount: 2,
+  csvCount: 2,
+  boxCount: 3,
 };
 
 const CSV_LIST: CsvItem[] = [
@@ -107,7 +107,10 @@ const getTrimBoxStatusColor = (status: TrimBoxStatus): string => {
 
 // ─── CsvCard ─────────────────────────────────────────────────────────────────
 
-const CsvCard: React.FC<{ item: CsvItem }> = ({ item }) => {
+const CsvCard: React.FC<{ item: CsvItem; onPress: () => void }> = ({
+  item,
+  onPress,
+}) => {
   const stageColor = getStageColor(item.stage);
 
   const renderGridItem = (icon: string, label: string, value: string) => (
@@ -142,7 +145,11 @@ const CsvCard: React.FC<{ item: CsvItem }> = ({ item }) => {
   );
 
   return (
-    <View style={[styles.csvCard, { backgroundColor: stageColor }]}>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={onPress}
+      style={[styles.csvCard, { backgroundColor: stageColor }]}
+    >
       {/* Header */}
       <View style={styles.csvCardHeader}>
         <Box width={wp(9)} height={wp(9)} />
@@ -203,7 +210,7 @@ const CsvCard: React.FC<{ item: CsvItem }> = ({ item }) => {
           </CustomText>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -371,7 +378,15 @@ const OrderFulfillmentScreen: React.FC<{
 
         {/* ── CSV Cards ── */}
         {csvList.map(item => (
-          <CsvCard key={item.id} item={item} />
+          <CsvCard
+            key={item.id}
+            item={item}
+            onPress={() =>
+              navigation.navigate('PanelLocation', {
+                csvNumber: item.csvNumber,
+              })
+            }
+          />
         ))}
 
         {/* ── Trim Box Details ── */}

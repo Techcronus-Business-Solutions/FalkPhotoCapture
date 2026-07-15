@@ -15,6 +15,9 @@ export type RootStackParamList = {
     csvNumber: string;
   };
   OrderFulfillment: undefined;
+  PanelLocation: {
+    csvNumber: string;
+  };
 };
 
 export type LoginNavigationProp = NativeStackNavigationProp<
@@ -54,4 +57,12 @@ export type ScanTypeRouteProp = RouteProp<RootStackParamList, 'ScanType'>;
 export type OrderFulfillmentNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'OrderFulfillment'
+>;
+export type PanelLocationNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'PanelLocation'
+>;
+export type PanelLocationRouteProp = RouteProp<
+  RootStackParamList,
+  'PanelLocation'
 >;
