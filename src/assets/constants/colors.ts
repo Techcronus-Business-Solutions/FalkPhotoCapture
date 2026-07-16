@@ -9,8 +9,8 @@ export const COLORS = {
   greyText: '#6B7280',
   black: '#000000',
   overlay: 'rgba(0,0,0,0.5)',
-  lightgray: '#EFF3FD',
-  lightBlue: '',
+  lightgray: '#F0F0F0',
+  lightBlue: '#EFF3FD',
   orange: '#F97316',
 } as const;
 

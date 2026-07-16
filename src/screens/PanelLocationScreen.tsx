@@ -10,6 +10,7 @@ import type {
   PanelLocationNavigationProp,
   PanelLocationRouteProp,
 } from '../navigation/types';
+import CSV from '../assets/images/csv.svg';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ const PanelCard: React.FC<{ item: PanelItem }> = ({ item }) => {
 
         <CustomText
           size={FontSize.normalLargeText}
-          color={COLORS.black}
+          color={COLORS.primary}
           weight="bold"
           style={styles.panelId}
         >
@@ -138,11 +139,7 @@ const PanelLocationScreen: React.FC<{
         {/* CSV Header Card */}
         <View style={styles.csvHeaderCard}>
           <View style={styles.csvIconContainer}>
-            <Ionicons
-              name="document-text"
-              size={wp(6)}
-              color={COLORS.white}
-            />
+            <CSV width={wp(8)} height={wp(8)} />
           </View>
 
           <View style={styles.csvHeaderText}>
@@ -156,7 +153,7 @@ const PanelLocationScreen: React.FC<{
 
             <CustomText
               size={FontSize.extraLargeText}
-              color={COLORS.black}
+              color={COLORS.primary}
               weight="bold"
             >
               {csvNumber}
@@ -200,8 +197,8 @@ const styles = StyleSheet.create({
   csvIconContainer: {
     width: wp(12),
     height: wp(12),
-    borderRadius: wp(2.5),
-    backgroundColor: COLORS.primary,
+    borderRadius: wp(12),
+    backgroundColor: COLORS.lightBlue,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: wp(4),

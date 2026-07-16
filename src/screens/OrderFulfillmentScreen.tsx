@@ -9,7 +9,7 @@ import { wp } from '../utils/responsive';
 import type { OrderFulfillmentNavigationProp } from '../navigation/types';
 import Box from '../assets/images/box.svg';
 import Shop from '../assets/images/shop.svg';
-
+import CSV from '../assets/images/csv.svg';
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 type CsvStage = 'Shipped' | 'PM HOLD' | 'Active' | 'On Hold';
@@ -332,7 +332,7 @@ const OrderFulfillmentScreen: React.FC<{
           <View style={styles.summaryItem}>
             <View style={styles.summaryIconRow}>
               <View style={styles.summaryIconBg}>
-                <Ionicons name="list" size={wp(5)} color={COLORS.primary} />
+                <CSV width={wp(5)} height={wp(5)} />
               </View>
               <CustomText
                 size={FontSize.normalText}
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     width: wp(9),
     height: wp(9),
     borderRadius: wp(9),
-    backgroundColor: COLORS.lightgray,
+    backgroundColor: COLORS.lightBlue,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     borderRadius: wp(4),
 
     borderWidth: wp(0.5),
-    borderColor: '#E8E8E8',
+    borderColor: COLORS.border,
 
     paddingHorizontal: wp(4),
     paddingVertical: wp(4),
