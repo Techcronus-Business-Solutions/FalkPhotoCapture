@@ -12,7 +12,13 @@ import Shop from '../assets/images/shop.svg';
 import CSV from '../assets/images/csv.svg';
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type CsvStage = 'Shipped' | 'PM HOLD' | 'Active' | 'On Hold';
+type CsvStage =
+  | 'Shipped'
+  | 'PM HOLD'
+  | 'Active'
+  | 'On Hold'
+  | 'Waiting on Vendor'
+  | 'Ready For Production';
 type TrimBoxStatus = 'Shipped' | 'On Hold' | 'Active';
 
 interface OrderSummary {
@@ -43,7 +49,7 @@ interface TrimBoxItem {
 
 const ORDER_SUMMARY: OrderSummary = {
   orderNumber: '11241376',
-  csvCount: 2,
+  csvCount: 4,
   boxCount: 3,
 };
 
@@ -52,21 +58,41 @@ const CSV_LIST: CsvItem[] = [
     id: '1',
     csvNumber: '121215610',
     stage: 'Shipped',
-    panelLocation: 'Shipped',
+    panelLocation: 'Shipped (3)',
     panel: 'Completed',
     trim: 'No',
     accessories: 'No',
-    shop: 'No(Customer provide a cut list)',
+    shop: 'Complete',
   },
   {
     id: '2',
-    csvNumber: '121215610',
+    csvNumber: '121215611',
     stage: 'PM HOLD',
-    panelLocation: 'Shipped',
+    panelLocation: 'Shipped (3)',
     panel: 'Completed',
     trim: 'No',
     accessories: 'No',
-    shop: 'No(Customer provide a cut list)',
+    shop: 'No',
+  },
+  {
+    id: '3',
+    csvNumber: '121215612',
+    stage: 'Waiting on Vendor',
+    panelLocation: 'Shipped (3)',
+    panel: 'Completed',
+    trim: 'No',
+    accessories: 'No',
+    shop: 'No',
+  },
+  {
+    id: '4',
+    csvNumber: '121215613',
+    stage: 'Ready For Production',
+    panelLocation: '',
+    panel: 'No',
+    trim: 'No',
+    accessories: 'No',
+    shop: 'No',
   },
 ];
 
@@ -88,7 +114,7 @@ const getStageColor = (stage: string): string => {
   if (lower.includes('hold')) {
     return COLORS.failed;
   }
-  if (lower === 'active') {
+  if (lower === 'waiting on vendor') {
     return COLORS.orange;
   }
   return COLORS.primary;
