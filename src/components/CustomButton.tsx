@@ -7,8 +7,8 @@ import {
   type StyleProp,
 } from 'react-native';
 import CustomText from './CustomText';
-import { COLORS, FONTS, FontSize } from '../assets/constants';
-import { rf, wp, hp } from '../utils/responsive';
+import { COLORS, FontSize } from '../assets/constants';
+import { wp } from '../utils/responsive';
 
 type Variant = 'filled' | 'outline';
 
@@ -52,7 +52,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
         <CustomText
           size={FontSize.normalLargeText}
           color={isFilled ? COLORS.white : COLORS.primary}
-          style={styles.btnText}
+          weight="semibold"
         >
           {title}
         </CustomText>
@@ -79,9 +79,6 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.5,
-  },
-  btnText: {
-    fontFamily: FONTS.SEMIBOLD,
   },
 });
 

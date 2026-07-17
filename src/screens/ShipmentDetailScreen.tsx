@@ -23,7 +23,7 @@ import ImageCard from '../components/ImageCard';
 import DeleteImageModal from '../components/DeleteImageModal';
 import Loader from '../components/Loader';
 import EmptyView from '../components/EmptyView';
-import { COLORS, FONTS, FontSize } from '../assets/constants';
+import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import { usePhotoStore, type PhotoItem } from '../store/photoStore';
 import { useShipmentStore } from '../store/shipmentStore';
@@ -368,7 +368,7 @@ const ShipmentDetailScreen: React.FC<{
           <CustomText
             size={FontSize.normalText}
             color={COLORS.primary}
-            style={{ fontFamily: FONTS.REGULAR }}
+            weight="regular"
           >
             BoL Number
           </CustomText>
@@ -376,7 +376,7 @@ const ShipmentDetailScreen: React.FC<{
             <CustomText
               size={FontSize.largeText}
               color={COLORS.primary}
-              style={{ fontFamily: FONTS.BOLD }}
+              weight="bold"
             >
               {bolNumber}
             </CustomText>
@@ -385,7 +385,8 @@ const ShipmentDetailScreen: React.FC<{
           <CustomText
             size={FontSize.normalText}
             color={COLORS.primary}
-            style={{ marginTop: wp(4), fontFamily: FONTS.REGULAR }}
+            weight="regular"
+            style={{ marginTop: wp(4) }}
           >
             Sales Order
           </CustomText>
@@ -393,7 +394,7 @@ const ShipmentDetailScreen: React.FC<{
             <CustomText
               size={FontSize.largeText}
               color={COLORS.primary}
-              style={{ fontFamily: FONTS.BOLD }}
+              weight="bold"
             >
               {shipment.salesOrderNo}
             </CustomText>
@@ -405,7 +406,8 @@ const ShipmentDetailScreen: React.FC<{
           <CustomText
             size={FontSize.normalText}
             color={COLORS.black}
-            style={styles.sectionTitle}
+            weight="semibold"
+            style={{ marginBottom: wp(2) }}
           >
             Choose Photos
           </CustomText>
@@ -424,7 +426,7 @@ const ShipmentDetailScreen: React.FC<{
               <View>
                 <CustomText
                   size={FontSize.normalText}
-                  style={{ fontFamily: FONTS.BOLD }}
+                  weight="bold"
                   color={COLORS.primary}
                 >
                   Take Photo
@@ -449,7 +451,7 @@ const ShipmentDetailScreen: React.FC<{
               <View>
                 <CustomText
                   size={FontSize.normalText}
-                  style={{ fontFamily: FONTS.BOLD }}
+                  weight="bold"
                   color={COLORS.primary}
                 >
                   Choose from Gallery
@@ -554,7 +556,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: wp(2),
-    fontFamily: FONTS.SEMIBOLD,
   },
   bolContainer: {},
   photoOptions: {},
@@ -578,7 +579,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   emptyText: {
-    fontFamily: FONTS.REGULAR,
     marginTop: wp(2),
   },
   placeholderCard: {
@@ -593,10 +593,8 @@ const styles = StyleSheet.create({
   placeholderText: {
     marginTop: wp(1),
     textAlign: 'center',
-    fontFamily: FONTS.REGULAR,
   },
   hint: {
-    fontFamily: FONTS.REGULAR,
     marginTop: wp(2),
     textAlign: 'center',
   },
@@ -611,7 +609,6 @@ const styles = StyleSheet.create({
   },
   loaderText: {
     marginTop: wp(4),
-    fontFamily: FONTS.REGULAR,
   },
 });
 

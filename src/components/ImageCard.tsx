@@ -56,6 +56,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
           <CustomText
             size={FontSize.tinyText}
             color={COLORS.greyText}
+            weight="regular"
             style={{ marginTop: wp(1) }}
           >
             {message}

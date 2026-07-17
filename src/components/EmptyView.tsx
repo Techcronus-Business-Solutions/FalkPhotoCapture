@@ -21,6 +21,7 @@ const EmptyView: React.FC<EmptyViewProps> = ({
     <CustomText
       size={FontSize.normalText}
       color={COLORS.greyText}
+      weight="regular"
       style={styles.text}
     >
       {message}

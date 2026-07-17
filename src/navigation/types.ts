@@ -4,9 +4,19 @@ import type { RouteProp } from '@react-navigation/native';
 export type RootStackParamList = {
   Login: undefined;
   Dashboard: undefined;
+  ManagerDashboard: undefined;
+  ShippingManagement: undefined;
+  ShippingDetails: undefined;
   ShipmentDetail: {
     shipmentId: string;
     bolNumber: string;
+  };
+  ScanType: {
+    csvNumber: string;
+  };
+  OrderFulfillment: undefined;
+  PanelLocation: {
+    csvNumber: string;
   };
 };
 
@@ -18,12 +28,41 @@ export type DashboardNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'Dashboard'
 >;
+export type ManagerDashboardNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'ManagerDashboard'
+>;
 export type ShipmentDetailNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'ShipmentDetail'
+>;
+export type ShippingManagementNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'ShippingManagement'
+>;
+export type ShippingDetailsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'ShippingDetails'
+>;
+export type ScanTypeNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'ScanType'
 >;
 
 export type ShipmentDetailRouteProp = RouteProp<
   RootStackParamList,
   'ShipmentDetail'
+>;
+export type ScanTypeRouteProp = RouteProp<RootStackParamList, 'ScanType'>;
+export type OrderFulfillmentNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'OrderFulfillment'
+>;
+export type PanelLocationNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'PanelLocation'
+>;
+export type PanelLocationRouteProp = RouteProp<
+  RootStackParamList,
+  'PanelLocation'
 >;

@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import CustomText from './CustomText';
-import { COLORS, FONTS, FontSize } from '../assets/constants';
+import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import type { Shipment, ShipmentStatus } from '../types/shipment';
 import { usePendingUploadsStore } from '../store/pendingUploadsStore';
@@ -48,7 +48,7 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({
         <CustomText
           size={FontSize.normalLargeText}
           color={COLORS.black}
-          style={{ fontFamily: FONTS.BOLD }}
+          weight="bold"
         >
           {shipment.bolNumber}
         </CustomText>
@@ -80,7 +80,7 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({
           <CustomText
             size={FontSize.tinyText}
             color={COLORS.white}
-            style={{ fontFamily: FONTS.SEMIBOLD }}
+            weight="semibold"
           >
             {status}
           </CustomText>
@@ -119,7 +119,6 @@ const styles = StyleSheet.create({
   },
   sub: {
     marginTop: wp(1), // vertical margin → hp
-    fontFamily: FONTS.REGULAR,
   },
   right: {
     flexDirection: 'row',

@@ -3,7 +3,7 @@ import { Modal, View, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import CustomText from './CustomText';
 import CustomButton from './CustomButton';
-import { COLORS, FONTS, FontSize } from '../assets/constants';
+import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 
 interface DeleteImageModalProps {
@@ -36,6 +36,7 @@ const DeleteImageModal: React.FC<DeleteImageModalProps> = ({
         <CustomText
           size={FontSize.mediumLargeText}
           color={COLORS.primary}
+          weight="bold"
           style={styles.title}
         >
           Remove Photo
@@ -43,6 +44,7 @@ const DeleteImageModal: React.FC<DeleteImageModalProps> = ({
         <CustomText
           size={FontSize.normalText}
           color={COLORS.greyText}
+          weight="regular"
           style={styles.message}
         >
           Are you sure you want to remove this photo?
@@ -85,14 +87,13 @@ const styles = StyleSheet.create({
     width: wp(20),
     height: wp(20),
     borderRadius: wp(10),
-    backgroundColor: '#F0F0F0',
+    backgroundColor: COLORS.lightgray,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: wp(4),
   },
   title: {
     marginBottom: wp(1),
-    fontFamily: FONTS.BOLD,
     textAlign: 'center',
   },
   message: {
