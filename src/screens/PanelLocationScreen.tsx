@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import CustomText from '../components/CustomText';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
+import useBackHandler from '../hooks/useBackHandler';
 import type {
   PanelLocationNavigationProp,
   PanelLocationRouteProp,
@@ -120,13 +121,14 @@ const PanelLocationScreen: React.FC<{
   const insets = useSafeAreaInsets();
   const { csvNumber } = route.params;
   const panelList = useMemo(() => PANEL_LIST, []);
+  const handleBack = useBackHandler(navigation);
 
   return (
     <View style={styles.root}>
       <Header
         title="Panel Location"
         leftIconName="arrow-back"
-        onLeftPress={() => navigation.goBack()}
+        onLeftPress={handleBack}
       />
 
       <ScrollView

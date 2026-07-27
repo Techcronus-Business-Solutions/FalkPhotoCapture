@@ -10,6 +10,7 @@ import ShippingDetailsScreen from '../screens/ShippingDetailsScreen';
 import ScanTypeScreen from '../screens/ScanTypeScreen';
 import OrderFulfillmentScreen from '../screens/OrderFulfillmentScreen';
 import PanelLocationScreen from '../screens/PanelLocationScreen';
+import DriverAllocationScreen from '../screens/DriverAllocationScreen';
 import { useAuthStore } from '../store/authStore';
 import type { RootStackParamList } from './types';
 
@@ -57,6 +58,10 @@ const AppNavigator: React.FC = () => {
             <Stack.Screen
               name="PanelLocation"
               component={PanelLocationScreen}
+            />
+            <Stack.Screen
+              name="DriverAllocation"
+              component={DriverAllocationScreen}
             />
           </>
         ) : (

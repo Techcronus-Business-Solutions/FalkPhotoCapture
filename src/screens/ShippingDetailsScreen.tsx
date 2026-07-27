@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import CustomText from '../components/CustomText';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
+import useBackHandler from '../hooks/useBackHandler';
 import type { ShippingDetailsNavigationProp } from '../navigation/types';
 
 interface ShippingData {
@@ -101,13 +102,14 @@ const ShippingDetailsScreen: React.FC<{
   const insets = useSafeAreaInsets();
   const data = MOCK_DATA;
   const spec = data.specification;
+  const handleBack = useBackHandler(navigation);
 
   return (
     <View style={styles.root}>
       <Header
         title="Shipping Details"
         leftIconName="arrow-back"
-        onLeftPress={() => navigation.goBack()}
+        onLeftPress={handleBack}
       />
 
       <ScrollView

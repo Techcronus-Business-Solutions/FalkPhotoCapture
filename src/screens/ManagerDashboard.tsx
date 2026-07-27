@@ -103,6 +103,8 @@ const ManagerDashboard: React.FC<{
           onPress={() => {
             if (selected === 'shipping') {
               navigation.navigate('ShippingManagement');
+            } else if (selected === 'driver') {
+              navigation.navigate('DriverAllocation');
             }
           }}
           style={styles.nextBtn}

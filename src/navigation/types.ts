@@ -18,6 +18,7 @@ export type RootStackParamList = {
   PanelLocation: {
     csvNumber: string;
   };
+  DriverAllocation: undefined;
 };
 
 export type LoginNavigationProp = NativeStackNavigationProp<
@@ -65,4 +66,8 @@ export type PanelLocationNavigationProp = NativeStackNavigationProp<
 export type PanelLocationRouteProp = RouteProp<
   RootStackParamList,
   'PanelLocation'
+>;
+export type DriverAllocationNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'DriverAllocation'
 >;

@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   Modal,
 } from 'react-native';
+import useBackHandler from '../hooks/useBackHandler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -45,6 +46,7 @@ const ShipmentDetailScreen: React.FC<{
   route: ShipmentDetailRouteProp;
 }> = ({ navigation, route }) => {
   const { shipmentId, bolNumber } = route.params;
+  const handleBack = useBackHandler(navigation);
   const [uploading, setUploading] = useState(false);
   const uploadingRef = useRef(false);
   const [selectingPhotos, setSelectingPhotos] = useState(false);
@@ -336,7 +338,7 @@ const ShipmentDetailScreen: React.FC<{
       <View style={styles.root}>
         <Header
           title="Shipment"
-          onLeftPress={() => navigation.goBack()}
+          onLeftPress={handleBack}
           leftIconName="arrow-back"
         />
         <EmptyView
@@ -351,7 +353,7 @@ const ShipmentDetailScreen: React.FC<{
     <View style={styles.root}>
       <Header
         title="Shipment"
-        onLeftPress={() => navigation.goBack()}
+        onLeftPress={handleBack}
         leftIconName="arrow-back"
       />
 

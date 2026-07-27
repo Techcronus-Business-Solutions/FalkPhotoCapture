@@ -10,6 +10,7 @@ import CustomInput2 from '../components/CustomInput2';
 import CustomDropdown from '../components/CustomDropdown';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
+import useBackHandler from '../hooks/useBackHandler';
 import type { ShippingManagementNavigationProp } from '../navigation/types';
 
 const ENTRY_TYPES = [
@@ -21,6 +22,7 @@ const ShippingManagementScreen: React.FC<{
   navigation: ShippingManagementNavigationProp;
 }> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const handleBack = useBackHandler(navigation);
   const [entryType, setEntryType] = useState('Panel');
   const [csvNumber, setCsvNumber] = useState('');
   const [boxNumber, setBoxNumber] = useState('');
@@ -77,7 +79,7 @@ const ShippingManagementScreen: React.FC<{
       <Header
         title="Shipping Management"
         leftIconName="arrow-back"
-        onLeftPress={() => navigation.goBack()}
+        onLeftPress={handleBack}
       />
 
       <ScrollView
@@ -285,44 +287,40 @@ const ShippingManagementScreen: React.FC<{
       <View
         style={[styles.bottomBar, { paddingBottom: insets.bottom + wp(2) }]}
       >
-        <View
-          style={[styles.buttonRow, { paddingBottom: insets.bottom + wp(2) }]}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[styles.actionButton, styles.leftButton]}
+          onPress={() =>
+            navigation.navigate('ScanType', {
+              csvNumber:
+                entryType === 'Panel'
+                  ? 'CSV - ' + csvNumber
+                  : 'Order - ' + orderNumber + ' | Box - ' + boxNumber,
+            })
+          }
         >
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[styles.actionButton, styles.leftButton]}
-            onPress={() =>
-              navigation.navigate('ScanType', {
-                csvNumber:
-                  entryType === 'Panel'
-                    ? 'CSV - ' + csvNumber
-                    : 'Order - ' + orderNumber + ' | Box - ' + boxNumber,
-              })
-            }
+          <CustomText
+            size={FontSize.normalText}
+            color={COLORS.primary}
+            weight="semibold"
           >
-            <CustomText
-              size={FontSize.normalText}
-              color={COLORS.primary}
-              weight="semibold"
-            >
-              Scan Type
-            </CustomText>
-          </TouchableOpacity>
+            Scan Type
+          </CustomText>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[styles.actionButton, styles.primaryAction]}
-            onPress={() => navigation.navigate('ShippingDetails')}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[styles.actionButton, styles.primaryAction]}
+          onPress={() => navigation.navigate('ShippingDetails')}
+        >
+          <CustomText
+            size={FontSize.normalText}
+            color={COLORS.white}
+            weight="semibold"
           >
-            <CustomText
-              size={FontSize.normalText}
-              color={COLORS.white}
-              weight="semibold"
-            >
-              View Shipping Details
-            </CustomText>
-          </TouchableOpacity>
-        </View>
+            View Shipping Details
+          </CustomText>
+        </TouchableOpacity>
       </View>
 
       {scannerVisible && (
@@ -360,7 +358,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: wp(4),
-    paddingBottom: wp(22),
+    paddingBottom: wp(26),
     flexGrow: 1,
   },
   card: {
@@ -485,8 +483,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     paddingHorizontal: wp(4),
     paddingTop: wp(3),
-  },
-  buttonRow: {
     flexDirection: 'row',
   },
   actionButton: {

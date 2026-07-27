@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import CustomText from '../components/CustomText';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
+import useBackHandler from '../hooks/useBackHandler';
 import type { OrderFulfillmentNavigationProp } from '../navigation/types';
 import Box from '../assets/images/box.svg';
 import Shop from '../assets/images/shop.svg';
@@ -306,6 +307,7 @@ const OrderFulfillmentScreen: React.FC<{
   navigation: OrderFulfillmentNavigationProp;
 }> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const handleBack = useBackHandler(navigation);
 
   const csvList = useMemo(() => CSV_LIST, []);
   const trimBoxList = useMemo(() => TRIM_BOX_LIST, []);
@@ -315,7 +317,7 @@ const OrderFulfillmentScreen: React.FC<{
       <Header
         title="Order fulfillment"
         leftIconName="arrow-back"
-        onLeftPress={() => navigation.goBack()}
+        onLeftPress={handleBack}
       />
 
       <ScrollView

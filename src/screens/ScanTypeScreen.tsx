@@ -6,6 +6,7 @@ import CustomInput2 from '../components/CustomInput2';
 import CustomDropdown from '../components/CustomDropdown';
 import { COLORS } from '../assets/constants';
 import { wp } from '../utils/responsive';
+import useBackHandler from '../hooks/useBackHandler';
 import type {
   ScanTypeNavigationProp,
   ScanTypeRouteProp,
@@ -54,6 +55,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
 }) => {
   const { csvNumber } = route.params;
   const insets = useSafeAreaInsets();
+  const handleBack = useBackHandler(navigation);
 
   const [scanType, setScanType] = useState<ScanTypeValue>('Load');
   const [location, setLocation] = useState('');
@@ -133,7 +135,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
       <Header
         title={csvNumber}
         leftIconName="arrow-back"
-        onLeftPress={() => navigation.goBack()}
+        onLeftPress={handleBack}
       />
 
       <ScrollView
