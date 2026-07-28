@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-camera-kit';
 import Toast from 'react-native-toast-message';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import Header from '../components/Header';
 import CustomInput2 from '../components/CustomInput2';
 import CustomDropdown from '../components/CustomDropdown';
@@ -13,10 +14,22 @@ import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
 import type { DriverAllocationNavigationProp } from '../navigation/types';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface Driver {
   id: string;
   name: string;
 }
+
+type ItemType = 'Panel' | 'TrimBox';
+
+interface AllocationItem {
+  id: string;
+  type: ItemType;
+  name: string;
+}
+
+// ─── Dummy Data (replace with API data later) ────────────────────────────────
 
 const DRIVER_LIST: Driver[] = [
   { id: '1', name: 'John Smith' },
@@ -27,6 +40,26 @@ const DRIVER_LIST: Driver[] = [
 
 const DRIVER_OPTIONS = DRIVER_LIST.map(d => ({ label: d.name, value: d.id }));
 
+const ITEM_LIST: AllocationItem[] = [
+  { id: '1', type: 'Panel', name: 'Panel 123445575768P1' },
+  { id: '2', type: 'Panel', name: 'Panel 123445575768P5' },
+  { id: '3', type: 'Panel', name: 'Panel 123445575768P6' },
+  { id: '4', type: 'TrimBox', name: 'Trim Box 2' },
+  { id: '5', type: 'TrimBox', name: 'Trim Box 3' },
+  { id: '6', type: 'TrimBox', name: 'Trim Box 4' },
+  { id: '7', type: 'Panel', name: 'Panel 123445575768P11' },
+  { id: '8', type: 'Panel', name: 'Panel 123445575768P12' },
+  { id: '9', type: 'TrimBox', name: 'Trim Box 5' },
+  { id: '10', type: 'TrimBox', name: 'Trim Box 6' },
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const getItemIconName = (type: ItemType): string =>
+  type === 'Panel' ? 'layers-outline' : 'cube-outline';
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
+
 const DriverAllocationScreen: React.FC<{
   navigation: DriverAllocationNavigationProp;
 }> = ({ navigation }) => {
@@ -35,6 +68,8 @@ const DriverAllocationScreen: React.FC<{
   const [bol, setBol] = useState('');
   const [driverId, setDriverId] = useState('');
   const [scannerVisible, setScannerVisible] = useState(false);
+
+  const itemList = useMemo(() => ITEM_LIST, []);
 
   const handleReadCode = useCallback(
     (event: { nativeEvent: { codeStringValue: string } }) => {
@@ -75,9 +110,13 @@ const DriverAllocationScreen: React.FC<{
       />
 
       <ScrollView
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingBottom: insets.bottom + wp(22) },
+        ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── BOL + Driver card ── */}
         <View style={styles.card}>
           <CustomInput2
             label="BOL"
@@ -96,8 +135,61 @@ const DriverAllocationScreen: React.FC<{
             onValueChange={setDriverId}
           />
         </View>
+
+        {/* ── Item List card ── */}
+        <View style={styles.itemListCard}>
+          {/* Header */}
+          <View style={styles.itemListHeader}>
+            <CustomText
+              size={FontSize.mediumLargeText}
+              color={COLORS.primary}
+              weight="bold"
+            >
+              Item List
+            </CustomText>
+
+            <View style={styles.itemCountBadge}>
+              <CustomText
+                size={FontSize.smallText}
+                color={COLORS.white}
+                weight="bold"
+              >
+                {`${itemList.length} Item`}
+              </CustomText>
+            </View>
+          </View>
+
+          <View style={styles.itemListDivider} />
+
+          {/* Rows */}
+          {itemList.map((item, index) => (
+            <React.Fragment key={item.id}>
+              <View style={styles.itemRow}>
+                <Ionicons
+                  name={getItemIconName(item.type) as any}
+                  size={wp(8)}
+                  color={COLORS.primary}
+                  style={styles.itemIcon}
+                />
+
+                <CustomText
+                  size={FontSize.normalLargeText}
+                  color={COLORS.black}
+                  weight="medium"
+                >
+                  {item.name}
+                </CustomText>
+              </View>
+
+              {index < itemList.length - 1 && (
+                <View style={styles.itemRowDivider} />
+              )}
+            </React.Fragment>
+          ))}
+        </View>
       </ScrollView>
 
+      {/* ── Sticky submit button ── */}
       <View
         style={[styles.bottomBar, { paddingBottom: insets.bottom + wp(2) }]}
       >
@@ -136,6 +228,8 @@ const DriverAllocationScreen: React.FC<{
   );
 };
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -143,13 +237,56 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: wp(4),
-    paddingBottom: wp(22),
     flexGrow: 1,
   },
+
+  // ── BOL + Driver card ──
   card: {
     borderRadius: wp(4),
     marginVertical: wp(4),
   },
+
+  // ── Item List card ──
+  itemListCard: {
+    borderRadius: wp(4),
+    borderWidth: wp(0.3),
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+    marginTop: wp(2),
+  },
+  itemListHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp(4),
+    paddingVertical: wp(4),
+  },
+  itemCountBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: wp(3),
+    paddingVertical: wp(2),
+    borderRadius: wp(5),
+  },
+  itemListDivider: {
+    height: wp(0.3),
+    backgroundColor: COLORS.border,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: wp(4),
+    paddingVertical: wp(4),
+  },
+  itemIcon: {
+    marginRight: wp(3),
+  },
+  itemRowDivider: {
+    height: wp(0.3),
+    backgroundColor: COLORS.border,
+    marginHorizontal: wp(4),
+  },
+
+  // ── Bottom bar ──
   bottomBar: {
     position: 'absolute',
     left: 0,
@@ -166,6 +303,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // ── Scanner ──
   scannerOverlay: {
     position: 'absolute',
     top: 0,
