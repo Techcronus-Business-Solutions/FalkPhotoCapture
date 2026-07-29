@@ -19,6 +19,7 @@ const ManagerDashboard: React.FC<{
   const [selected, setSelected] = useState('shipping');
   const [logoutVisible, setLogoutVisible] = useState(false);
   const logout = useAuthStore(state => state.logout);
+  const user = useAuthStore(state => state.user);
 
   const modules = [
     { key: 'shipping', title: 'Shipping Management' },
@@ -52,7 +53,7 @@ const ManagerDashboard: React.FC<{
             color={COLORS.primary}
             weight="semibold"
           >
-            Welcome, John
+            Welcome, {user?.fullName ?? ''}
           </CustomText>
           <CustomText
             size={FontSize.smallMediumText}

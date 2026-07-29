@@ -51,6 +51,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     searchShipments,
   } = useShipmentStore();
   const logout = useAuthStore(state => state.logout);
+  const user = useAuthStore(state => state.user);
   const { isConnected } = useNetworkStatus();
   const pendingUploadEntries = usePendingUploadsStore(
     state => state.pendingUploads,
@@ -313,14 +314,14 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
             color={COLORS.primary}
             weight="semibold"
           >
-            Welcome, John
+            Welcome, {user?.fullName ?? ''}
           </CustomText>
           <CustomText
             size={FontSize.smallMediumText}
             color={COLORS.greyText}
             style={{ marginTop: wp(1) }}
           >
-            Driver
+           Driver
           </CustomText>
         </View>
       </View>
