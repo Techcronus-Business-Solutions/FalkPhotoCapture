@@ -9,4 +9,6 @@ export const API_ROUTES = {
   DRIVER_LIST: `${BASE_URL}/master-data/GetDriverList`,
   PANEL_BY_CSV: `${BASE_URL}/Order/GetPanelByCsv`,
   TRIM_BOX_BY_ORDER: `${BASE_URL}/Order/GetTrimBoxByOrderNumber`,
+  SHIPMENT_DETAILS_BY_CSV: `${BASE_URL}/Order/GetShipmentDetailsByCSV`,
+  SHIPMENT_DETAILS_BY_ORDER: `${BASE_URL}/Order/GetShipmentDetailsByOrderNo`,
 } as const;

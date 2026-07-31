@@ -607,7 +607,23 @@ const ShippingManagementScreen: React.FC<{
         <TouchableOpacity
           activeOpacity={0.8}
           style={[styles.actionButton, styles.primaryAction]}
-          onPress={() => navigation.navigate('ShippingDetails')}
+          onPress={() => {
+            const identifier = entryType === 'Panel' ? csvNumber : orderNumber;
+            if (!identifier.trim()) {
+              Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2:
+                  'Please enter a valid identifier before viewing shipment details.',
+              });
+              return;
+            }
+
+            navigation.navigate('ShippingDetails', {
+              entityType: entryType === 'Panel' ? 'Panel' : 'Trip Box',
+              identifier,
+            });
+          }}
         >
           <CustomText
             size={FontSize.normalText}

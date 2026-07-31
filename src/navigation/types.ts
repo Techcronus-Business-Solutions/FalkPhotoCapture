@@ -6,7 +6,10 @@ export type RootStackParamList = {
   Dashboard: undefined;
   ManagerDashboard: undefined;
   ShippingManagement: undefined;
-  ShippingDetails: undefined;
+  ShippingDetails: {
+    entityType?: 'Panel' | 'Trip Box';
+    identifier?: string;
+  };
   ShipmentDetail: {
     shipmentId: string;
     bolNumber: string;
@@ -43,6 +46,10 @@ export type ShippingManagementNavigationProp = NativeStackNavigationProp<
   'ShippingManagement'
 >;
 export type ShippingDetailsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'ShippingDetails'
+>;
+export type ShippingDetailsRouteProp = RouteProp<
   RootStackParamList,
   'ShippingDetails'
 >;
