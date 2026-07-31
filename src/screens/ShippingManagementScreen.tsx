@@ -25,7 +25,6 @@ const ShippingManagementScreen: React.FC<{
   const handleBack = useBackHandler(navigation);
   const [entryType, setEntryType] = useState('Panel');
   const [csvNumber, setCsvNumber] = useState('');
-  const [boxNumber, setBoxNumber] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
   const [scannerVisible, setScannerVisible] = useState(false);
 
@@ -137,12 +136,6 @@ const ShippingManagementScreen: React.FC<{
                 onChangeText={setOrderNumber}
                 rightIconName="barcode-outline"
                 onRightPress={handleBarcodePress}
-              />
-              <CustomInput2
-                label="Box Number"
-                placeholder=""
-                value={boxNumber}
-                onChangeText={setBoxNumber}
               />
             </>
           )}
@@ -295,7 +288,8 @@ const ShippingManagementScreen: React.FC<{
               csvNumber:
                 entryType === 'Panel'
                   ? 'CSV - ' + csvNumber
-                  : 'Order - ' + orderNumber + ' | Box - ' + boxNumber,
+                  : 'Order - ' + orderNumber,
+              entryType: entryType as 'Panel' | 'Trip Box',
             })
           }
         >

@@ -53,11 +53,12 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { csvNumber } = route.params;
+  const { csvNumber, entryType } = route.params;
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
 
   const [scanType, setScanType] = useState<ScanTypeValue>('Load');
+  const [boxNumber, setBoxNumber] = useState('');
   const [location, setLocation] = useState('');
   const [bol, setBol] = useState('');
   const [holdLocation, setHoldLocation] = useState('');
@@ -66,6 +67,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
 
   const handleScanTypeChange = useCallback((value: string) => {
     setScanType(value as ScanTypeValue);
+    setBoxNumber('');
     setLocation('');
     setBol('');
     setHoldLocation('');
@@ -150,6 +152,15 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
             value={scanType}
             onValueChange={handleScanTypeChange}
           />
+          {entryType === 'Trip Box' && (
+            <CustomInput2
+              label="Box Number"
+              placeholder=""
+              value={boxNumber}
+              onChangeText={setBoxNumber}
+              keyboardType="numeric"
+            />
+          )}
           {renderDynamicFields()}
         </View>
       </ScrollView>
