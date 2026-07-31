@@ -1,5 +1,11 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-camera-kit';
 import Toast from 'react-native-toast-message';
@@ -12,13 +18,20 @@ import CustomText from '../components/CustomText';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { apiClient } from '../services/apiClient';
+import { API_ROUTES } from '../services/ApiRoutes';
 import type { DriverAllocationNavigationProp } from '../navigation/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Driver {
-  id: string;
-  name: string;
+  employeeId: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  status: string;
+  role: string;
 }
 
 type ItemType = 'Panel' | 'TrimBox';
@@ -29,16 +42,7 @@ interface AllocationItem {
   name: string;
 }
 
-// ─── Dummy Data (replace with API data later) ────────────────────────────────
-
-const DRIVER_LIST: Driver[] = [
-  { id: '1', name: 'John Smith' },
-  { id: '2', name: 'David Wilson' },
-  { id: '3', name: 'Michael Brown' },
-  { id: '4', name: 'James Anderson' },
-];
-
-const DRIVER_OPTIONS = DRIVER_LIST.map(d => ({ label: d.name, value: d.id }));
+// ─── Static Data ─────────────────────────────────────────────────────────────
 
 const ITEM_LIST: AllocationItem[] = [
   { id: '1', type: 'Panel', name: 'Panel 123445575768P1' },
@@ -65,11 +69,61 @@ const DriverAllocationScreen: React.FC<{
 }> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
+  const { isConnected } = useNetworkStatus();
   const [bol, setBol] = useState('');
   const [driverId, setDriverId] = useState('');
   const [scannerVisible, setScannerVisible] = useState(false);
 
-  const itemList = useMemo(() => ITEM_LIST, []);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [driverOptions, setDriverOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
+  const [driversLoading, setDriversLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchDrivers = async () => {
+      if (!isConnected) {
+        Toast.show({
+          type: 'error',
+          text1: 'No Internet',
+          text2: 'Please check your internet connection.',
+        });
+        return;
+      }
+
+      setDriversLoading(true);
+      try {
+        const res = await apiClient.getPublic(API_ROUTES.DRIVER_LIST);
+        const json = await res.json();
+
+        if (json.success) {
+          const active: Driver[] = (json.data as Driver[]).filter(
+            d => d.status === 'Active',
+          );
+          setDrivers(active);
+          setDriverOptions(
+            active.map(d => ({ label: d.fullName, value: d.employeeId })),
+          );
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: json.message || 'Failed to load driver list.',
+          });
+        }
+      } catch {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Failed to load driver list. Please try again.',
+        });
+      } finally {
+        setDriversLoading(false);
+      }
+    };
+
+    fetchDrivers();
+  }, [isConnected]);
 
   const handleReadCode = useCallback(
     (event: { nativeEvent: { codeStringValue: string } }) => {
@@ -127,13 +181,29 @@ const DriverAllocationScreen: React.FC<{
             onRightPress={handleBarcodePress}
           />
 
-          <CustomDropdown
-            label="Driver"
-            placeholder=""
-            options={DRIVER_OPTIONS}
-            value={driverId}
-            onValueChange={setDriverId}
-          />
+          {driversLoading ? (
+            <ActivityIndicator
+              size="small"
+              color={COLORS.primary}
+              style={styles.driverLoader}
+            />
+          ) : driverOptions.length === 0 ? (
+            <CustomText
+              size={FontSize.normalText}
+              color={COLORS.border}
+              style={styles.noDriversText}
+            >
+              No drivers available
+            </CustomText>
+          ) : (
+            <CustomDropdown
+              label="Driver"
+              placeholder=""
+              options={driverOptions}
+              value={driverId}
+              onValueChange={setDriverId}
+            />
+          )}
         </View>
 
         {/* ── Item List card ── */}
@@ -154,7 +224,7 @@ const DriverAllocationScreen: React.FC<{
                 color={COLORS.white}
                 weight="bold"
               >
-                {`${itemList.length} Item`}
+                {`${ITEM_LIST.length} Item`}
               </CustomText>
             </View>
           </View>
@@ -162,7 +232,7 @@ const DriverAllocationScreen: React.FC<{
           <View style={styles.itemListDivider} />
 
           {/* Rows */}
-          {itemList.map((item, index) => (
+          {ITEM_LIST.map((item, index) => (
             <React.Fragment key={item.id}>
               <View style={styles.itemRow}>
                 <Ionicons
@@ -181,7 +251,7 @@ const DriverAllocationScreen: React.FC<{
                 </CustomText>
               </View>
 
-              {index < itemList.length - 1 && (
+              {index < ITEM_LIST.length - 1 && (
                 <View style={styles.itemRowDivider} />
               )}
             </React.Fragment>
@@ -243,6 +313,13 @@ const styles = StyleSheet.create({
   // ── BOL + Driver card ──
   card: {
     borderRadius: wp(4),
+    marginVertical: wp(4),
+  },
+  driverLoader: {
+    marginVertical: wp(4),
+  },
+  noDriversText: {
+    textAlign: 'center',
     marginVertical: wp(4),
   },
 

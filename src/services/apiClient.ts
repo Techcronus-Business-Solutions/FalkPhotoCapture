@@ -17,6 +17,13 @@ export const apiClient = {
     });
   },
 
+  getPublic: async (url: string): Promise<Response> => {
+    return fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  },
+
   post: async (url: string, body: unknown): Promise<Response> => {
     const authHeaders = await getAuthHeaders();
     return fetch(url, {
