@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -38,6 +38,17 @@ interface PanelData {
 
 type PanelStatus = 'active' | 'hold' | 'not-found' | 'error' | null;
 
+interface TrimBox {
+  orderNumber: number;
+  entityType: string;
+  boxNumber: number;
+  status: string;
+  currentLocation: string;
+  holdLocation: string;
+}
+
+type TrimBoxStatus = 'active' | 'partial-hold' | 'not-found' | 'error' | null;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const formatScanTime = (iso: string): string => {
@@ -55,6 +66,9 @@ const getLocationDisplay = (
     ? { label: 'Hold Location', value: data.holdLocation }
     : { label: 'Current Location', value: data.currentLocation };
 };
+
+const getBoxLocation = (box: TrimBox): string =>
+  box.status === 'QA Hold' ? box.holdLocation : box.currentLocation;
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -82,12 +96,20 @@ const ShippingManagementScreen: React.FC<{
   const [panelMessage, setPanelMessage] = useState('');
   const [panelLoading, setPanelLoading] = useState(false);
 
+  const [trimBoxStatus, setTrimBoxStatus] = useState<TrimBoxStatus>(null);
+  const [trimBoxList, setTrimBoxList] = useState<TrimBox[]>([]);
+  const [trimBoxMessage, setTrimBoxMessage] = useState('');
+  const [trimBoxLoading, setTrimBoxLoading] = useState(false);
+
   useEffect(() => {
     setCsvNumber('');
     setOrderNumber('');
     setPanelStatus(null);
     setPanelData(null);
     setPanelMessage('');
+    setTrimBoxStatus(null);
+    setTrimBoxList([]);
+    setTrimBoxMessage('');
   }, [entryType]);
 
   const fetchPanelStatus = useCallback(
@@ -133,6 +155,52 @@ const ShippingManagementScreen: React.FC<{
     [isConnected, panelLoading],
   );
 
+  const fetchTrimBoxStatus = useCallback(
+    async (order: string) => {
+      if (!order.trim() || trimBoxLoading) return;
+
+      if (!isConnected) {
+        Toast.show({
+          type: 'error',
+          text1: 'No Internet',
+          text2: 'Please check your internet connection.',
+        });
+        return;
+      }
+
+      Keyboard.dismiss();
+      setTrimBoxList([]);
+      setTrimBoxStatus(null);
+      setTrimBoxMessage('');
+      setTrimBoxLoading(true);
+
+      try {
+        const res = await apiClient.get(
+          `${API_ROUTES.TRIM_BOX_BY_ORDER}/${order.trim()}`,
+        );
+        const json = await res.json();
+
+        if (json.success && (json.data as TrimBox[]).length > 0) {
+          const sorted = [...(json.data as TrimBox[])].sort(
+            (a, b) => a.boxNumber - b.boxNumber,
+          );
+          setTrimBoxList(sorted);
+          const hasHold = sorted.some(b => b.status === 'QA Hold');
+          setTrimBoxStatus(hasHold ? 'partial-hold' : 'active');
+        } else {
+          setTrimBoxMessage(json.message || 'No trim boxes found.');
+          setTrimBoxStatus('not-found');
+        }
+      } catch {
+        setTrimBoxMessage('Failed to fetch trim box status. Please try again.');
+        setTrimBoxStatus('error');
+      } finally {
+        setTrimBoxLoading(false);
+      }
+    },
+    [isConnected, trimBoxLoading],
+  );
+
   const handleReadCode = useCallback(
     (event: { nativeEvent: { codeStringValue: string } }) => {
       const scanned = event.nativeEvent.codeStringValue;
@@ -148,23 +216,115 @@ const ShippingManagementScreen: React.FC<{
 
       if (entryType === 'Panel') {
         fetchPanelStatus(scanned);
+      } else {
+        fetchTrimBoxStatus(scanned);
       }
     },
-    [entryType, fetchPanelStatus],
+    [entryType, fetchPanelStatus, fetchTrimBoxStatus],
   );
 
   const handleBarcodePress = useCallback(() => {
     setScannerVisible(true);
   }, []);
 
-  const tripBoxDetails = useMemo(
-    () => [
-      { boxName: 'Box 1', status: 'Active', location: 'B2' },
-      { boxName: 'Box 2', status: 'Active', location: 'C2' },
-      { boxName: 'Box 3', status: 'Active', location: 'D1' },
-    ],
-    [],
-  );
+  // ─── Trim Box status card ─────────────────────────────────────────────────
+
+  const renderTrimBoxStatusCard = () => {
+    if (trimBoxLoading) {
+      return (
+        <View style={styles.panelStatusCard}>
+          <ActivityIndicator
+            size="small"
+            color={COLORS.primary}
+            style={styles.panelLoader}
+          />
+        </View>
+      );
+    }
+
+    if (trimBoxStatus === null) return null;
+
+    if (trimBoxStatus === 'not-found' || trimBoxStatus === 'error') {
+      return (
+        <View style={styles.panelStatusCard}>
+          <View style={[styles.panelTopRow, { marginBottom: 0 }]}>
+            <Ionicons
+              style={styles.panelIconWrapper}
+              name="close-circle"
+              size={wp(10)}
+              color={COLORS.failed}
+            />
+            <View style={styles.panelTextWrapper}>
+              <CustomText
+                size={FontSize.normalLargeText}
+                color={COLORS.failed}
+                weight="semibold"
+              >
+                Not Found
+              </CustomText>
+              <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+                {trimBoxMessage}
+              </CustomText>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    const isAllActive = trimBoxStatus === 'active';
+    const bannerColor = isAllActive ? COLORS.uploaded : COLORS.orange;
+    const bannerText = isAllActive
+      ? `ACTIVE — ${trimBoxList.length} BOXES`
+      : `BOXES FOUND — ${trimBoxList.length} (PARTIAL HOLD)`;
+
+    return (
+      <View style={styles.panelStatusCard}>
+        <View style={styles.panelTopRow}>
+          <Ionicons
+            style={styles.panelIconWrapper}
+            name={isAllActive ? 'checkmark-circle' : 'alert-circle'}
+            size={wp(10)}
+            color={bannerColor}
+          />
+          <View style={styles.panelTextWrapper}>
+            <CustomText
+              size={FontSize.normalLargeText}
+              color={bannerColor}
+              weight="semibold"
+            >
+              {bannerText}
+            </CustomText>
+          </View>
+        </View>
+        {trimBoxList.map(box => (
+          <View key={box.boxNumber} style={styles.tripBoxRow}>
+            <View style={styles.tripBoxIconWrapper}>
+              <Ionicons
+                name="cube-outline"
+                size={wp(8)}
+                color={COLORS.primary}
+              />
+            </View>
+            <View style={styles.tripBoxTextWrapper}>
+              <CustomText
+                size={FontSize.smallText}
+                color={COLORS.black}
+                weight="semibold"
+              >
+                {`Box ${box.boxNumber}`}
+              </CustomText>
+              <CustomText size={FontSize.normalText} color={COLORS.black}>
+                Status: {box.status}
+              </CustomText>
+              <CustomText size={FontSize.normalText} color={COLORS.greyText}>
+                Location: {getBoxLocation(box)}
+              </CustomText>
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   // ─── Panel data rows (shared between active and hold cards) ──────────────
 
@@ -407,61 +567,16 @@ const ShippingManagementScreen: React.FC<{
                 onChangeText={setOrderNumber}
                 rightIconName="barcode-outline"
                 onRightPress={handleBarcodePress}
+                returnKeyType="search"
+                onSubmitEditing={() => fetchTrimBoxStatus(orderNumber)}
               />
             </>
           )}
         </View>
 
-        {entryType === 'Panel' ? (
-          renderPanelStatusCard()
-        ) : (
-          <View style={styles.statusCard}>
-            <View style={styles.statusHeader}>
-              <Ionicons
-                name="checkmark-circle"
-                size={wp(10)}
-                color={COLORS.primary}
-                style={{ marginRight: wp(3) }}
-              />
-              <CustomText
-                size={FontSize.normalLargeText}
-                color={COLORS.primary}
-                weight="semibold"
-              >
-                Current Status
-              </CustomText>
-            </View>
-            {tripBoxDetails.map(item => (
-              <View key={item.boxName} style={styles.tripBoxRow}>
-                <View style={styles.tripBoxIconWrapper}>
-                  <Ionicons
-                    name="cube-outline"
-                    size={wp(8)}
-                    color={COLORS.primary}
-                  />
-                </View>
-                <View style={styles.tripBoxTextWrapper}>
-                  <CustomText
-                    size={FontSize.smallText}
-                    color={COLORS.black}
-                    weight="semibold"
-                  >
-                    {item.boxName}
-                  </CustomText>
-                  <CustomText size={FontSize.normalText} color={COLORS.black}>
-                    Status: {item.status}
-                  </CustomText>
-                  <CustomText
-                    size={FontSize.normalText}
-                    color={COLORS.greyText}
-                  >
-                    Location: {item.location}
-                  </CustomText>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+        {entryType === 'Panel'
+          ? renderPanelStatusCard()
+          : renderTrimBoxStatusCard()}
       </ScrollView>
 
       <View
