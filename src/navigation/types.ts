@@ -13,6 +13,7 @@ export type RootStackParamList = {
   };
   ScanType: {
     csvNumber: string;
+    entryType: 'Panel' | 'Trip Box';
   };
   OrderFulfillment: undefined;
   PanelLocation: {
