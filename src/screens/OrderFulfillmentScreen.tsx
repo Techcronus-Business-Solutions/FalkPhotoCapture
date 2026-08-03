@@ -1,144 +1,129 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import Toast from 'react-native-toast-message';
 import Header from '../components/Header';
 import CustomText from '../components/CustomText';
+import Loader from '../components/Loader';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
-import type { OrderFulfillmentNavigationProp } from '../navigation/types';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { apiClient } from '../services/apiClient';
+import { API_ROUTES } from '../services/ApiRoutes';
+import type {
+  OrderFulfillmentNavigationProp,
+  OrderFulfillmentRouteProp,
+  PanelLocationItem,
+} from '../navigation/types';
 import Box from '../assets/images/box.svg';
 import Shop from '../assets/images/shop.svg';
 import CSV from '../assets/images/csv.svg';
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type CsvStage =
-  | 'Shipped'
-  | 'PM HOLD'
-  | 'Active'
-  | 'On Hold'
-  | 'Waiting on Vendor'
-  | 'Ready For Production';
-type TrimBoxStatus = 'Shipped' | 'On Hold' | 'Active';
-
-interface OrderSummary {
-  orderNumber: string;
-  csvCount: number;
-  boxCount: number;
-}
-
-interface CsvItem {
-  id: string;
-  csvNumber: string;
-  stage: CsvStage;
-  panelLocation: string;
-  panel: string;
-  trim: string;
+interface Panel {
+  orderNumber: number;
+  csv: string;
+  stage: string;
+  shops: string;
   accessories: string;
-  shop: string;
+  trims: string;
+  panel: string;
+  currentLocation: string;
+  status: string;
+  panelLocations: PanelLocationItem[];
 }
 
-interface TrimBoxItem {
-  id: string;
-  boxName: string;
-  status: TrimBoxStatus;
-  location: string;
+interface TrimBox {
+  boxNumber: number;
+  status: string;
+  currentLocation: string;
+  holdLocation: string;
 }
 
-// ─── Dummy Data (replace with API data later) ────────────────────────────────
+interface FullOrderData {
+  panels: Panel[];
+  trimBoxes: TrimBox[];
+}
 
-const ORDER_SUMMARY: OrderSummary = {
-  orderNumber: '11241376',
-  csvCount: 4,
-  boxCount: 3,
-};
-
-const CSV_LIST: CsvItem[] = [
-  {
-    id: '1',
-    csvNumber: '121215610',
-    stage: 'Shipped',
-    panelLocation: 'Shipped (3)',
-    panel: 'Completed',
-    trim: 'No',
-    accessories: 'No',
-    shop: 'Complete',
-  },
-  {
-    id: '2',
-    csvNumber: '121215611',
-    stage: 'PM HOLD',
-    panelLocation: 'Shipped (3)',
-    panel: 'Completed',
-    trim: 'No',
-    accessories: 'No',
-    shop: 'No',
-  },
-  {
-    id: '3',
-    csvNumber: '121215612',
-    stage: 'Waiting on Vendor',
-    panelLocation: 'Shipped (3)',
-    panel: 'Completed',
-    trim: 'No',
-    accessories: 'No',
-    shop: 'No',
-  },
-  {
-    id: '4',
-    csvNumber: '121215613',
-    stage: 'Ready For Production',
-    panelLocation: '',
-    panel: 'No',
-    trim: 'No',
-    accessories: 'No',
-    shop: 'No',
-  },
-];
-
-const TRIM_BOX_LIST: TrimBoxItem[] = [
-  { id: '1', boxName: 'Box 1', status: 'Shipped', location: 'B2' },
-  { id: '2', boxName: 'Box 2', status: 'On Hold', location: 'Shipping' },
-  { id: '3', boxName: 'Box 3', status: 'Active', location: 'C2' },
-];
-
-// ─── Color constants ──────────────────────────────────────────────────────────
+interface FullOrderApiResponse {
+  success: boolean;
+  message?: string;
+  data: FullOrderData | null;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const getStageColor = (stage: string): string => {
-  const lower = stage.toLowerCase();
-  if (lower === 'shipped') {
-    return COLORS.uploaded;
+  const value = (stage || '').trim().toLowerCase();
+
+  switch (value) {
+    case 'shipped':
+      return COLORS.uploaded;
+
+    case 'cancelled':
+    case 'pm hold':
+    case 'logistic - quality hold':
+      return COLORS.failed;
+
+    case 'new order':
+    case 'shop drawings':
+    case 'awaiting approved cut list':
+    case 'create csv':
+    case 'csv pm review':
+    case 'csv production review':
+    case 'ready for production':
+      return COLORS.primary;
+
+    case 'waiting on vendor':
+    case 'logistics - ready to ship':
+    case 'logistics - partial shipment':
+      return COLORS.orange;
+
+    default:
+      return COLORS.black;
   }
-  if (lower.includes('hold')) {
-    return COLORS.failed;
-  }
-  if (lower === 'waiting on vendor') {
-    return COLORS.orange;
-  }
-  return COLORS.primary;
 };
 
-const getTrimBoxStatusColor = (status: TrimBoxStatus): string => {
-  switch (status) {
-    case 'Shipped':
-      return COLORS.uploaded;
-    case 'On Hold':
-      return COLORS.failed;
-    case 'Active':
-      return COLORS.orange;
+const getTrimBoxStatusColor = (status: string): string => {
+  if (status === 'Shipped') return COLORS.uploaded;
+  if (status === 'Active') return COLORS.orange;
+  return COLORS.failed;
+};
+
+const getPanelLocationItemDisplay = (loc: PanelLocationItem): string => {
+  if (loc.status === 'Shipped') return 'Shipped';
+  if (loc.status === 'QA Hold') return loc.holdLocation || loc.currentLocation;
+  return loc.currentLocation;
+};
+
+const buildPanelLocationItemSummary = (locations: PanelLocationItem[]): string => {
+  if (!locations?.length) return '';
+  const counts: Record<string, number> = {};
+  for (const loc of locations) {
+    const key = getPanelLocationItemDisplay(loc) || 'Unknown';
+    counts[key] = (counts[key] || 0) + 1;
   }
+  return Object.entries(counts)
+    .map(([loc, count]) => `${loc} (${count})`)
+    .join(', ');
+};
+
+const getTrimBoxLocation = (box: TrimBox): string => {
+  if (box.status === 'QA Hold') return box.holdLocation || box.currentLocation;
+  return box.currentLocation;
 };
 
 // ─── CsvCard ─────────────────────────────────────────────────────────────────
 
-const CsvCard: React.FC<{ item: CsvItem; onPress: () => void }> = ({
+const CsvCard: React.FC<{ item: Panel; onPress: () => void }> = ({
   item,
   onPress,
 }) => {
   const stageColor = getStageColor(item.stage);
+  const panelLocationSummary = buildPanelLocationItemSummary(item.panelLocations);
 
   const renderGridItem = (icon: string, label: string, value: string) => (
     <View style={styles.csvGridItem}>
@@ -149,7 +134,6 @@ const CsvCard: React.FC<{ item: CsvItem; onPress: () => void }> = ({
           color={COLORS.white}
           style={styles.csvGridIcon}
         />
-
         <View style={styles.csvGridTextContainer}>
           <CustomText
             size={FontSize.smallText}
@@ -158,7 +142,6 @@ const CsvCard: React.FC<{ item: CsvItem; onPress: () => void }> = ({
           >
             {label}
           </CustomText>
-
           <CustomText
             size={FontSize.normalLargeText}
             color={COLORS.white}
@@ -180,16 +163,14 @@ const CsvCard: React.FC<{ item: CsvItem; onPress: () => void }> = ({
       {/* Header */}
       <View style={styles.csvCardHeader}>
         <Box width={wp(9)} height={wp(9)} />
-
         <View style={styles.csvCardHeaderText}>
           <CustomText
             size={FontSize.normalLargeText}
             color={COLORS.white}
             weight="bold"
           >
-            {`CSV: ${item.csvNumber}`}
+            {`CSV: ${item.csv}`}
           </CustomText>
-
           <CustomText
             size={FontSize.extraLargeText}
             color={COLORS.white}
@@ -204,12 +185,9 @@ const CsvCard: React.FC<{ item: CsvItem; onPress: () => void }> = ({
 
       {/* Details */}
       <View style={styles.csvGrid}>
-        {renderGridItem('location', 'Panel Location', item.panelLocation)}
-
+        {renderGridItem('location', 'Panel Locations', panelLocationSummary)}
         {renderGridItem('location', 'Panel', item.panel)}
-
-        {renderGridItem('cube', 'Trim', item.trim)}
-
+        {renderGridItem('cube', 'Trim', item.trims)}
         {renderGridItem('settings-outline', 'Accessories', item.accessories)}
       </View>
 
@@ -218,7 +196,6 @@ const CsvCard: React.FC<{ item: CsvItem; onPress: () => void }> = ({
       {/* Shop */}
       <View style={styles.csvShopRow}>
         <Shop width={wp(5)} height={wp(5)} style={styles.csvShopIcon} />
-
         <View style={styles.csvShopText}>
           <CustomText
             size={FontSize.smallText}
@@ -227,13 +204,12 @@ const CsvCard: React.FC<{ item: CsvItem; onPress: () => void }> = ({
           >
             Shop
           </CustomText>
-
           <CustomText
             size={FontSize.normalLargeText}
             color={COLORS.white}
             weight="bold"
           >
-            {item.shop}
+            {item.shops}
           </CustomText>
         </View>
       </View>
@@ -243,34 +219,34 @@ const CsvCard: React.FC<{ item: CsvItem; onPress: () => void }> = ({
 
 // ─── TrimBoxCard ─────────────────────────────────────────────────────────────
 
-const TrimBoxCard: React.FC<{ item: TrimBoxItem }> = ({ item }) => {
+const TrimBoxCard: React.FC<{ item: TrimBox }> = ({ item }) => {
   const statusColor = getTrimBoxStatusColor(item.status);
+  const location = getTrimBoxLocation(item);
 
   return (
     <View style={styles.trimBoxCard}>
       {/* Left */}
       <View style={styles.trimLeftSection}>
         <Ionicons name="cube" size={wp(6)} color={statusColor} />
-
         <CustomText
           size={FontSize.normalLargeText}
           color={COLORS.greyText}
           weight="bold"
           style={styles.trimBoxName}
         >
-          {item.boxName}
+          {`Box ${item.boxNumber}`}
         </CustomText>
       </View>
 
       {/* Center */}
-      <View style={{ flex: 1 }}>
+      <View style={styles.trimBadgeWrapper}>
         <View style={[styles.trimBoxBadge, { backgroundColor: statusColor }]}>
           <CustomText
             size={FontSize.normalText}
             color={COLORS.white}
             weight="bold"
           >
-            {item.status}
+            {item.status || 'Unknown'}
           </CustomText>
         </View>
       </View>
@@ -278,7 +254,6 @@ const TrimBoxCard: React.FC<{ item: TrimBoxItem }> = ({ item }) => {
       {/* Right */}
       <View style={styles.trimLocationSection}>
         <Ionicons name="location-sharp" size={wp(6)} color={statusColor} />
-
         <View style={styles.trimLocationText}>
           <CustomText
             size={FontSize.smallText}
@@ -287,13 +262,12 @@ const TrimBoxCard: React.FC<{ item: TrimBoxItem }> = ({ item }) => {
           >
             Location
           </CustomText>
-
           <CustomText
             size={FontSize.normalText}
             color={COLORS.black}
             weight="bold"
           >
-            {item.location}
+            {location}
           </CustomText>
         </View>
       </View>
@@ -305,12 +279,66 @@ const TrimBoxCard: React.FC<{ item: TrimBoxItem }> = ({ item }) => {
 
 const OrderFulfillmentScreen: React.FC<{
   navigation: OrderFulfillmentNavigationProp;
-}> = ({ navigation }) => {
+  route: OrderFulfillmentRouteProp;
+}> = ({ navigation, route }) => {
+  const { orderNumber } = route.params;
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
+  const { isConnected } = useNetworkStatus();
 
-  const csvList = useMemo(() => CSV_LIST, []);
-  const trimBoxList = useMemo(() => TRIM_BOX_LIST, []);
+  const [loading, setLoading] = useState(false);
+  const [orderData, setOrderData] = useState<FullOrderData | null>(null);
+  const [apiMessage, setApiMessage] = useState('');
+  const requestInFlightRef = useRef(false);
+
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
+      if (!orderNumber?.trim()) return;
+      if (requestInFlightRef.current) return;
+
+      if (!isConnected) {
+        setOrderData(null);
+        setApiMessage('No internet connection.');
+        Toast.show({
+          type: 'error',
+          text1: 'No Internet',
+          text2: 'Please check your internet connection.',
+        });
+        return;
+      }
+
+      requestInFlightRef.current = true;
+      setLoading(true);
+      setApiMessage('');
+      setOrderData(null);
+
+      try {
+        const response = await apiClient.get(
+          `${API_ROUTES.FULL_ORDER_DETAILS}/${orderNumber.trim()}`,
+        );
+        const json: FullOrderApiResponse = await response.json();
+
+        if (json.success && json.data) {
+          setOrderData(json.data);
+          setApiMessage(json.message || '');
+        } else {
+          setOrderData(null);
+          setApiMessage(json.message || 'No order details found.');
+        }
+      } catch {
+        setOrderData(null);
+        setApiMessage('Failed to fetch order details. Please try again.');
+      } finally {
+        requestInFlightRef.current = false;
+        setLoading(false);
+      }
+    };
+
+    fetchOrderDetails();
+  }, [orderNumber, isConnected]);
+
+  const panels = orderData?.panels ?? [];
+  const trimBoxes = orderData?.trimBoxes ?? [];
 
   return (
     <View style={styles.root}>
@@ -329,7 +357,7 @@ const OrderFulfillmentScreen: React.FC<{
       >
         {/* ── Order Summary Card ── */}
         <View style={styles.summaryCard}>
-          <View style={styles.summaryItem}>
+          <View style={[styles.summaryItem,{flex: 1.5}]}>
             <View style={styles.summaryIconRow}>
               <View style={styles.summaryIconBg}>
                 <Ionicons
@@ -351,7 +379,7 @@ const OrderFulfillmentScreen: React.FC<{
               color={COLORS.black}
               weight="bold"
             >
-              {ORDER_SUMMARY.orderNumber}
+              {orderNumber}
             </CustomText>
           </View>
 
@@ -375,7 +403,7 @@ const OrderFulfillmentScreen: React.FC<{
               color={COLORS.black}
               weight="bold"
             >
-              {ORDER_SUMMARY.csvCount}
+              {panels.length}
             </CustomText>
           </View>
 
@@ -399,37 +427,63 @@ const OrderFulfillmentScreen: React.FC<{
               color={COLORS.black}
               weight="bold"
             >
-              {ORDER_SUMMARY.boxCount}
+              {trimBoxes.length}
             </CustomText>
           </View>
         </View>
 
+        {/* ── Loading ── */}
+        {loading && (
+          <View style={styles.loaderWrapper}>
+            <Loader visible />
+          </View>
+        )}
+
+        {/* ── Empty / Error State ── */}
+        {!loading && !orderData && (
+          <View style={styles.emptyWrapper}>
+            <CustomText
+              size={FontSize.normalLargeText}
+              color={COLORS.greyText}
+              weight="medium"
+            >
+              {apiMessage || 'No order details found.'}
+            </CustomText>
+          </View>
+        )}
+
         {/* ── CSV Cards ── */}
-        {csvList.map(item => (
-          <CsvCard
-            key={item.id}
-            item={item}
-            onPress={() =>
-              navigation.navigate('PanelLocation', {
-                csvNumber: item.csvNumber,
-              })
-            }
-          />
-        ))}
+        {!loading &&
+          panels.map((item, index) => (
+            <CsvCard
+              key={`${item.csv}-${index}`}
+              item={item}
+              onPress={() =>
+                navigation.navigate('PanelLocation', {
+                  csv: item.csv,
+                  panelLocations: item.panelLocations,
+                })
+              }
+            />
+          ))}
 
         {/* ── Trim Box Details ── */}
-        <CustomText
-          size={FontSize.mediumLargeText}
-          color={COLORS.greyText}
-          weight="bold"
-          style={styles.sectionTitle}
-        >
-          Trim Box Details
-        </CustomText>
+        {!loading && trimBoxes.length > 0 && (
+          <>
+            <CustomText
+              size={FontSize.mediumLargeText}
+              color={COLORS.greyText}
+              weight="bold"
+              style={styles.sectionTitle}
+            >
+              Trim Box Details
+            </CustomText>
 
-        {trimBoxList.map(item => (
-          <TrimBoxCard key={item.id} item={item} />
-        ))}
+            {trimBoxes.map(item => (
+              <TrimBoxCard key={item.boxNumber} item={item} />
+            ))}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -457,7 +511,6 @@ const styles = StyleSheet.create({
     marginBottom: wp(4),
     overflow: 'hidden',
   },
-  // Left-aligned: icon+label on one row, bold value below
   summaryItem: {
     flex: 1,
     paddingVertical: wp(4),
@@ -483,6 +536,20 @@ const styles = StyleSheet.create({
     marginVertical: wp(4),
   },
 
+  // ── Loading / Empty ──
+  loaderWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: wp(40),
+  },
+  emptyWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: wp(40),
+  },
+
   // ── CSV cards ──
   csvCard: {
     borderRadius: wp(4),
@@ -490,64 +557,50 @@ const styles = StyleSheet.create({
     paddingVertical: wp(4.5),
     marginBottom: wp(4),
   },
-
   csvCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-
-  csvHeaderIcon: {
-    marginRight: wp(3),
-  },
-
   csvCardHeaderText: {
     flex: 1,
     marginLeft: wp(4),
   },
-
   csvDivider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.35)',
     marginVertical: wp(4),
   },
-
   csvGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     rowGap: wp(4),
   },
-
   csvGridItem: {
     width: '50%',
   },
-
   csvGridContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-
   csvGridIcon: {
     marginRight: wp(2),
     marginTop: wp(0.5),
   },
-
   csvGridTextContainer: {
     flex: 1,
   },
-
   csvShopRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-
   csvShopIcon: {
     marginRight: wp(2),
     marginTop: wp(0.5),
   },
-
   csvShopText: {
     flex: 1,
   },
+
   // ── Section title ──
   sectionTitle: {
     marginTop: wp(2),
@@ -559,48 +612,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-
     backgroundColor: COLORS.white,
-
     borderRadius: wp(4),
-
     borderWidth: wp(0.5),
     borderColor: COLORS.border,
-
     paddingHorizontal: wp(4),
     paddingVertical: wp(4),
-
     marginBottom: wp(4),
   },
-
   trimLeftSection: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-
   trimBoxName: {
     marginLeft: wp(3),
   },
-
+  trimBadgeWrapper: {
+    flex: 1,
+  },
   trimBoxBadge: {
     minWidth: wp(22),
     alignItems: 'center',
     justifyContent: 'center',
-
     paddingHorizontal: wp(5),
     paddingVertical: wp(2.3),
-
     borderRadius: wp(5),
   },
-
   trimLocationSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
     flex: 1,
   },
-
   trimLocationText: {
     marginLeft: wp(1.5),
   },

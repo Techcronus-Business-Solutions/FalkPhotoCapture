@@ -376,7 +376,11 @@ const renderHeaderStatus = () => {
         <TouchableOpacity
           activeOpacity={0.8}
           style={styles.fulfillmentButton}
-          onPress={() => navigation.navigate('OrderFulfillment')}
+          onPress={() =>
+            navigation.navigate('OrderFulfillment', {
+              orderNumber: shipmentData?.orderNumber || '',
+            })
+          }
         >
           <CustomText
             size={FontSize.normalLargeText}

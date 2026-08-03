@@ -11,4 +11,5 @@ export const API_ROUTES = {
   TRIM_BOX_BY_ORDER: `${BASE_URL}/Order/GetTrimBoxByOrderNumber`,
   SHIPMENT_DETAILS_BY_CSV: `${BASE_URL}/Order/GetShipmentDetailsByCSV`,
   SHIPMENT_DETAILS_BY_ORDER: `${BASE_URL}/Order/GetShipmentDetailsByOrderNo`,
+  FULL_ORDER_DETAILS: `${BASE_URL}/Order/GetFullOrderDetails`,
 } as const;

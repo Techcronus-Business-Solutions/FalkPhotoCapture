@@ -1,6 +1,16 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
+export interface PanelLocationItem {
+  csv: string;
+  status: string;
+  currentLocation: string;
+  holdLocation: string;
+  holdReason: string;
+  holdNotes: string;
+  lastScanType: string;
+}
+
 export type RootStackParamList = {
   Login: undefined;
   Dashboard: undefined;
@@ -18,9 +28,10 @@ export type RootStackParamList = {
     csvNumber: string;
     entryType: 'Panel' | 'Trip Box';
   };
-  OrderFulfillment: undefined;
+  OrderFulfillment: { orderNumber: string };
   PanelLocation: {
-    csvNumber: string;
+    csv: string;
+    panelLocations: PanelLocationItem[];
   };
   DriverAllocation: undefined;
 };
@@ -64,6 +75,10 @@ export type ShipmentDetailRouteProp = RouteProp<
 >;
 export type ScanTypeRouteProp = RouteProp<RootStackParamList, 'ScanType'>;
 export type OrderFulfillmentNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'OrderFulfillment'
+>;
+export type OrderFulfillmentRouteProp = RouteProp<
   RootStackParamList,
   'OrderFulfillment'
 >;
