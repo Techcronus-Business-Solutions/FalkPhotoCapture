@@ -18,14 +18,11 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator: React.FC = () => {
   const isLoggedIn = useAuthStore(state => state.isLoggedIn);
-  const userRole = useAuthStore(state => state.user?.role);
-  const initialRouteName =
-    userRole === 'manager' ? 'ManagerDashboard' : 'Dashboard';
 
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName={isLoggedIn ? initialRouteName : 'Login'}
+        initialRouteName={isLoggedIn ? 'ManagerDashboard' : 'Login'}
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',

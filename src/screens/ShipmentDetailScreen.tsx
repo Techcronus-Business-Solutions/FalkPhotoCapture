@@ -390,7 +390,7 @@ const ShipmentDetailScreen: React.FC<{
             weight="regular"
             style={{ marginTop: wp(4) }}
           >
-            Sales Order
+            Order Number
           </CustomText>
           <View style={styles.bolContainer}>
             <CustomText

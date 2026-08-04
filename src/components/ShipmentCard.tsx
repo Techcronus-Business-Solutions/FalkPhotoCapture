@@ -58,7 +58,7 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({
           color={COLORS.greyText}
           style={styles.sub}
         >
-          {`SO: ${shipment.salesOrderNo}`}
+          {`Order No.: ${shipment.salesOrderNo}`}
         </CustomText>
 
         <CustomText
