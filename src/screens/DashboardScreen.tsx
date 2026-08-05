@@ -32,13 +32,14 @@ import type { Shipment, ShipmentStatus } from '../types/shipment';
 import CustomInput from '../components/CustomInput';
 import { Camera } from 'react-native-camera-kit';
 import useBackHandler from '../hooks/useBackHandler';
+import useCameraScanner from '../hooks/useCameraScanner';
 
 const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   navigation,
 }) => {
   const [logoutVisible, setLogoutVisible] = useState(false);
   const insets = useSafeAreaInsets();
-  const [scannerVisible, setScannerVisible] = useState(false);
+  const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
 
   const {
     shipments,
@@ -105,11 +106,9 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         text2: codeStringValue,
       });
 
-      setTimeout(() => {
-        setScannerVisible(false);
-      }, 800);
+      setTimeout(closeScanner, 800);
     },
-    [],
+    [closeScanner],
   );
 
   const handleSync = useCallback(async () => {
@@ -289,7 +288,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         leftIconName="arrow-back"
         onLeftPress={handleBack}
         rightIconName="barcode-outline"
-        onRightPress={() => setScannerVisible(true)}
+        onRightPress={openScanner}
       />
 
       {!isConnected && (
@@ -387,9 +386,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
             />
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => {
-                setScannerVisible(false);
-              }}
+              onPress={closeScanner}
             >
               <CustomText
                 size={FontSize.normalText}

@@ -12,6 +12,7 @@ import CustomText from '../components/CustomText';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
+import useCameraScanner from '../hooks/useCameraScanner';
 import type { DriverAllocationNavigationProp } from '../navigation/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ const DriverAllocationScreen: React.FC<{
   const handleBack = useBackHandler(navigation);
   const [bol, setBol] = useState('');
   const [driverId, setDriverId] = useState('');
-  const [scannerVisible, setScannerVisible] = useState(false);
+  const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
 
   const itemList = useMemo(() => ITEM_LIST, []);
 
@@ -86,16 +87,12 @@ const DriverAllocationScreen: React.FC<{
         text2: codeStringValue,
       });
 
-      setTimeout(() => {
-        setScannerVisible(false);
-      }, 800);
+      setTimeout(closeScanner, 800);
     },
-    [],
+    [closeScanner],
   );
 
-  const handleBarcodePress = useCallback(() => {
-    setScannerVisible(true);
-  }, []);
+  const handleBarcodePress = openScanner;
 
   const handleSubmit = useCallback(() => {
     // TODO: dispatch driver allocation submission
@@ -215,7 +212,7 @@ const DriverAllocationScreen: React.FC<{
             />
             <TouchableOpacity
               style={styles.scannerClose}
-              onPress={() => setScannerVisible(false)}
+              onPress={closeScanner}
             >
               <CustomText size={FontSize.normalLargeText} color={COLORS.white}>
                 Close

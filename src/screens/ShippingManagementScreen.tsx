@@ -11,6 +11,7 @@ import CustomDropdown from '../components/CustomDropdown';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
+import useCameraScanner from '../hooks/useCameraScanner';
 import { toDigitsOnly } from '../utils/input';
 import type { ShippingManagementNavigationProp } from '../navigation/types';
 
@@ -27,7 +28,7 @@ const ShippingManagementScreen: React.FC<{
   const [entryType, setEntryType] = useState('Panel');
   const [csvNumber, setCsvNumber] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
-  const [scannerVisible, setScannerVisible] = useState(false);
+  const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
 
   const handleReadCode = useCallback(
     (event: { nativeEvent: { codeStringValue: string } }) => {
@@ -42,11 +43,9 @@ const ShippingManagementScreen: React.FC<{
         text2: codeStringValue,
       });
 
-      setTimeout(() => {
-        setScannerVisible(false);
-      }, 800);
+      setTimeout(closeScanner, 800);
     },
-    [],
+    [closeScanner],
   );
 
   const tripBoxDetails = useMemo(
@@ -70,9 +69,7 @@ const ShippingManagementScreen: React.FC<{
     [],
   );
 
-  const handleBarcodePress = useCallback(() => {
-    setScannerVisible(true);
-  }, []);
+  const handleBarcodePress = openScanner;
 
   return (
     <View style={styles.root}>
@@ -334,7 +331,7 @@ const ShippingManagementScreen: React.FC<{
             />
             <TouchableOpacity
               style={styles.scannerClose}
-              onPress={() => setScannerVisible(false)}
+              onPress={closeScanner}
             >
               <CustomText size={FontSize.normalLargeText} color={COLORS.white}>
                 Close

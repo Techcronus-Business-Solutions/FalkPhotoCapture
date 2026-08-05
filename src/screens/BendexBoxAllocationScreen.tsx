@@ -17,6 +17,7 @@ import CustomText from '../components/CustomText';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
+import useCameraScanner from '../hooks/useCameraScanner';
 import { toDigitsOnly } from '../utils/input';
 import type { BendexBoxAllocationNavigationProp } from '../navigation/types';
 
@@ -53,7 +54,7 @@ const BendexBoxAllocationScreen: React.FC<{
   const [orderNumber, setOrderNumber] = useState('');
   const [boxNumber, setBoxNumber] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [scannerVisible, setScannerVisible] = useState(false);
+  const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
 
   const trimList = useMemo(() => TRIM_LIST, []);
 
@@ -72,16 +73,12 @@ const BendexBoxAllocationScreen: React.FC<{
         text2: codeStringValue,
       });
 
-      setTimeout(() => {
-        setScannerVisible(false);
-      }, 800);
+      setTimeout(closeScanner, 800);
     },
-    [],
+    [closeScanner],
   );
 
-  const handleBarcodePress = useCallback(() => {
-    setScannerVisible(true);
-  }, []);
+  const handleBarcodePress = openScanner;
 
   const toggleItem = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -275,7 +272,7 @@ const BendexBoxAllocationScreen: React.FC<{
             />
             <TouchableOpacity
               style={styles.scannerClose}
-              onPress={() => setScannerVisible(false)}
+              onPress={closeScanner}
             >
               <CustomText size={FontSize.normalLargeText} color={COLORS.white}>
                 Close
