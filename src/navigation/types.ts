@@ -24,6 +24,10 @@ export type RootStackParamList = {
     csvNumber: string;
   };
   DriverAllocation: undefined;
+  BendexBoxAllocation: undefined;
+  BoxContents: {
+    boxNumber: string;
+  };
 };
 
 export type LoginNavigationProp = NativeStackNavigationProp<
@@ -76,6 +80,15 @@ export type DriverAllocationNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'DriverAllocation'
 >;
+export type BendexBoxAllocationNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'BendexBoxAllocation'
+>;
+export type BoxContentsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'BoxContents'
+>;
+export type BoxContentsRouteProp = RouteProp<RootStackParamList, 'BoxContents'>;
 export type DeliveryShippingDetailsNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'DeliveryShippingDetails'

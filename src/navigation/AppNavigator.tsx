@@ -12,6 +12,8 @@ import OrderFulfillmentScreen from '../screens/OrderFulfillmentScreen';
 import PanelLocationScreen from '../screens/PanelLocationScreen';
 import DriverAllocationScreen from '../screens/DriverAllocationScreen';
 import DeliveryShippingDetailsScreen from '../screens/DeliveryShippingDetailsScreen';
+import BendexBoxAllocationScreen from '../screens/BendexBoxAllocationScreen';
+import BoxContentsScreen from '../screens/BoxContentsScreen';
 import { useAuthStore } from '../store/authStore';
 import type { RootStackParamList } from './types';
 
@@ -64,6 +66,14 @@ const AppNavigator: React.FC = () => {
             <Stack.Screen
               name="DeliveryShippingDetails"
               component={DeliveryShippingDetailsScreen}
+            />
+            <Stack.Screen
+              name="BendexBoxAllocation"
+              component={BendexBoxAllocationScreen}
+            />
+            <Stack.Screen
+              name="BoxContents"
+              component={BoxContentsScreen}
             />
           </>
         ) : (

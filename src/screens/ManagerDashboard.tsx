@@ -96,6 +96,8 @@ const ManagerDashboard: React.FC<{
           onPress={() => {
             if (selected === 'shipping') {
               navigation.navigate('ShippingManagement');
+            } else if (selected === 'bendex') {
+              navigation.navigate('BendexBoxAllocation');
             } else if (selected === 'driver') {
               navigation.navigate('DriverAllocation');
             } else if (selected === 'dashboard') {

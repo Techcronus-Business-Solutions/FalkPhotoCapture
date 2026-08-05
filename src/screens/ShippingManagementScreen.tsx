@@ -11,6 +11,7 @@ import CustomDropdown from '../components/CustomDropdown';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
+import { toDigitsOnly } from '../utils/input';
 import type { ShippingManagementNavigationProp } from '../navigation/types';
 
 const ENTRY_TYPES = [
@@ -133,7 +134,8 @@ const ShippingManagementScreen: React.FC<{
                 label="Order Number"
                 placeholder=""
                 value={orderNumber}
-                onChangeText={setOrderNumber}
+                onChangeText={v => setOrderNumber(toDigitsOnly(v))}
+                keyboardType="number-pad"
                 rightIconName="barcode-outline"
                 onRightPress={handleBarcodePress}
               />

@@ -7,6 +7,7 @@ import CustomDropdown from '../components/CustomDropdown';
 import { COLORS } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
+import { toDigitsOnly } from '../utils/input';
 import type {
   ScanTypeNavigationProp,
   ScanTypeRouteProp,
@@ -157,8 +158,8 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
               label="Box Number"
               placeholder=""
               value={boxNumber}
-              onChangeText={setBoxNumber}
-              keyboardType="numeric"
+              onChangeText={v => setBoxNumber(toDigitsOnly(v))}
+              keyboardType="number-pad"
             />
           )}
           {renderDynamicFields()}
