@@ -31,6 +31,7 @@ import type { DashboardNavigationProp } from '../navigation/types';
 import type { Shipment, ShipmentStatus } from '../types/shipment';
 import CustomInput from '../components/CustomInput';
 import { Camera } from 'react-native-camera-kit';
+import useBackHandler from '../hooks/useBackHandler';
 
 const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   navigation,
@@ -54,6 +55,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   const pendingUploadEntries = usePendingUploadsStore(
     state => state.pendingUploads,
   );
+  const handleBack = useBackHandler(navigation);
 
   const displayShipments = useMemo<
     Array<{ shipment: Shipment; displayStatus: ShipmentStatus }>
@@ -265,7 +267,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         onPress={() =>
           // Prevent navigation while a sync/refresh is in progress
           !(isLoading || isSyncing) &&
-          navigation.navigate('ShipmentDetail', {
+          navigation.navigate('DeliveryShippingDetails', {
             shipmentId: item.shipment.id,
             bolNumber: item.shipment.bolNumber,
           })
@@ -284,7 +286,8 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     <View style={styles.root}>
       <Header
         title="Shipment List"
-      
+        leftIconName="arrow-back"
+        onLeftPress={handleBack}
         rightIconName="barcode-outline"
         onRightPress={() => setScannerVisible(true)}
       />

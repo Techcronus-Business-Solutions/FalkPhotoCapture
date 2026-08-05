@@ -23,7 +23,6 @@ const ManagerDashboard: React.FC<{
   const modules = [
     { key: 'shipping', title: 'Shipping Management' },
     { key: 'bendex', title: 'Bendex Box Allocation' },
-    { key: 'driver', title: 'Driver Assignment' },
     { key: 'dashboard', title: 'Upload Images' },
   ];
 

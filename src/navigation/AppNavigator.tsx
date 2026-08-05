@@ -4,13 +4,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import ManagerDashboard from '../screens/ManagerDashboard';
-import ShipmentDetailScreen from '../screens/ShipmentDetailScreen';
+import UploadImageScreen from '../screens/UploadImageScreen';
 import ShippingManagementScreen from '../screens/ShippingManagementScreen';
 import ShippingDetailsScreen from '../screens/ShippingDetailsScreen';
 import ScanTypeScreen from '../screens/ScanTypeScreen';
 import OrderFulfillmentScreen from '../screens/OrderFulfillmentScreen';
 import PanelLocationScreen from '../screens/PanelLocationScreen';
 import DriverAllocationScreen from '../screens/DriverAllocationScreen';
+import DeliveryShippingDetailsScreen from '../screens/DeliveryShippingDetailsScreen';
 import { useAuthStore } from '../store/authStore';
 import type { RootStackParamList } from './types';
 
@@ -44,8 +45,8 @@ const AppNavigator: React.FC = () => {
               component={ShippingDetailsScreen}
             />
             <Stack.Screen
-              name="ShipmentDetail"
-              component={ShipmentDetailScreen}
+              name="UploadImage"
+              component={UploadImageScreen}
             />
             <Stack.Screen name="ScanType" component={ScanTypeScreen} />
             <Stack.Screen
@@ -59,6 +60,10 @@ const AppNavigator: React.FC = () => {
             <Stack.Screen
               name="DriverAllocation"
               component={DriverAllocationScreen}
+            />
+            <Stack.Screen
+              name="DeliveryShippingDetails"
+              component={DeliveryShippingDetailsScreen}
             />
           </>
         ) : (

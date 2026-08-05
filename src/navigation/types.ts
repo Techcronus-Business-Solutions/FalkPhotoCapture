@@ -7,7 +7,11 @@ export type RootStackParamList = {
   ManagerDashboard: undefined;
   ShippingManagement: undefined;
   ShippingDetails: undefined;
-  ShipmentDetail: {
+  DeliveryShippingDetails: {
+    shipmentId: string;
+    bolNumber: string;
+  };
+  UploadImage: {
     shipmentId: string;
     bolNumber: string;
   };
@@ -34,9 +38,9 @@ export type ManagerDashboardNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'ManagerDashboard'
 >;
-export type ShipmentDetailNavigationProp = NativeStackNavigationProp<
+export type UploadImageNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'ShipmentDetail'
+  'UploadImage'
 >;
 export type ShippingManagementNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -51,9 +55,9 @@ export type ScanTypeNavigationProp = NativeStackNavigationProp<
   'ScanType'
 >;
 
-export type ShipmentDetailRouteProp = RouteProp<
+export type UploadImageRouteProp = RouteProp<
   RootStackParamList,
-  'ShipmentDetail'
+  'UploadImage'
 >;
 export type ScanTypeRouteProp = RouteProp<RootStackParamList, 'ScanType'>;
 export type OrderFulfillmentNavigationProp = NativeStackNavigationProp<
@@ -71,4 +75,12 @@ export type PanelLocationRouteProp = RouteProp<
 export type DriverAllocationNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'DriverAllocation'
+>;
+export type DeliveryShippingDetailsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'DeliveryShippingDetails'
+>;
+export type DeliveryShippingDetailsRouteProp = RouteProp<
+  RootStackParamList,
+  'DeliveryShippingDetails'
 >;
