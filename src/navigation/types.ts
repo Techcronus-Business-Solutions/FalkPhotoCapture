@@ -16,11 +16,16 @@ export type RootStackParamList = {
   Dashboard: undefined;
   ManagerDashboard: undefined;
   ShippingManagement: undefined;
+
+  DeliveryShippingDetails: {
+    shipmentId: string;
+    bolNumber: string;
+  };
   ShippingDetails: {
     entityType?: 'Panel' | 'Trip Box';
     identifier?: string;
   };
-  ShipmentDetail: {
+  UploadImage: {
     shipmentId: string;
     bolNumber: string;
   };
@@ -34,6 +39,10 @@ export type RootStackParamList = {
     panelLocations: PanelLocationItem[];
   };
   DriverAllocation: undefined;
+  BendexBoxAllocation: undefined;
+  BoxContents: {
+    boxNumber: string;
+  };
 };
 
 export type LoginNavigationProp = NativeStackNavigationProp<
@@ -48,9 +57,9 @@ export type ManagerDashboardNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'ManagerDashboard'
 >;
-export type ShipmentDetailNavigationProp = NativeStackNavigationProp<
+export type UploadImageNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'ShipmentDetail'
+  'UploadImage'
 >;
 export type ShippingManagementNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -69,9 +78,9 @@ export type ScanTypeNavigationProp = NativeStackNavigationProp<
   'ScanType'
 >;
 
-export type ShipmentDetailRouteProp = RouteProp<
+export type UploadImageRouteProp = RouteProp<
   RootStackParamList,
-  'ShipmentDetail'
+  'UploadImage'
 >;
 export type ScanTypeRouteProp = RouteProp<RootStackParamList, 'ScanType'>;
 export type OrderFulfillmentNavigationProp = NativeStackNavigationProp<
@@ -93,4 +102,21 @@ export type PanelLocationRouteProp = RouteProp<
 export type DriverAllocationNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'DriverAllocation'
+>;
+export type BendexBoxAllocationNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'BendexBoxAllocation'
+>;
+export type BoxContentsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'BoxContents'
+>;
+export type BoxContentsRouteProp = RouteProp<RootStackParamList, 'BoxContents'>;
+export type DeliveryShippingDetailsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'DeliveryShippingDetails'
+>;
+export type DeliveryShippingDetailsRouteProp = RouteProp<
+  RootStackParamList,
+  'DeliveryShippingDetails'
 >;

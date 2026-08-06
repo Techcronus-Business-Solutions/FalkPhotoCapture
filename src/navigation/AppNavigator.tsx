@@ -4,13 +4,16 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import ManagerDashboard from '../screens/ManagerDashboard';
-import ShipmentDetailScreen from '../screens/ShipmentDetailScreen';
+import UploadImageScreen from '../screens/UploadImageScreen';
 import ShippingManagementScreen from '../screens/ShippingManagementScreen';
 import ShippingDetailsScreen from '../screens/ShippingDetailsScreen';
 import ScanTypeScreen from '../screens/ScanTypeScreen';
 import OrderFulfillmentScreen from '../screens/OrderFulfillmentScreen';
 import PanelLocationScreen from '../screens/PanelLocationScreen';
 import DriverAllocationScreen from '../screens/DriverAllocationScreen';
+import DeliveryShippingDetailsScreen from '../screens/DeliveryShippingDetailsScreen';
+import BendexBoxAllocationScreen from '../screens/BendexBoxAllocationScreen';
+import BoxContentsScreen from '../screens/BoxContentsScreen';
 import { useAuthStore } from '../store/authStore';
 import type { RootStackParamList } from './types';
 
@@ -18,14 +21,11 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator: React.FC = () => {
   const isLoggedIn = useAuthStore(state => state.isLoggedIn);
-  const userRole = useAuthStore(state => state.user?.role);
-  const initialRouteName =
-    userRole === 'manager' ? 'ManagerDashboard' : 'Dashboard';
 
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName={isLoggedIn ? initialRouteName : 'Login'}
+        initialRouteName={isLoggedIn ? 'ManagerDashboard' : 'Login'}
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
@@ -47,8 +47,8 @@ const AppNavigator: React.FC = () => {
               component={ShippingDetailsScreen}
             />
             <Stack.Screen
-              name="ShipmentDetail"
-              component={ShipmentDetailScreen}
+              name="UploadImage"
+              component={UploadImageScreen}
             />
             <Stack.Screen name="ScanType" component={ScanTypeScreen} />
             <Stack.Screen
@@ -62,6 +62,18 @@ const AppNavigator: React.FC = () => {
             <Stack.Screen
               name="DriverAllocation"
               component={DriverAllocationScreen}
+            />
+            <Stack.Screen
+              name="DeliveryShippingDetails"
+              component={DeliveryShippingDetailsScreen}
+            />
+            <Stack.Screen
+              name="BendexBoxAllocation"
+              component={BendexBoxAllocationScreen}
+            />
+            <Stack.Screen
+              name="BoxContents"
+              component={BoxContentsScreen}
             />
           </>
         ) : (

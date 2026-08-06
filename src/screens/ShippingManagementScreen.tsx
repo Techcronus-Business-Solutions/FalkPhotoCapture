@@ -18,6 +18,8 @@ import CustomDropdown from '../components/CustomDropdown';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
+import useCameraScanner from '../hooks/useCameraScanner';
+import { toDigitsOnly } from '../utils/input';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { apiClient } from '../services/apiClient';
 import { API_ROUTES } from '../services/ApiRoutes';
@@ -89,7 +91,7 @@ const ShippingManagementScreen: React.FC<{
   const [entryType, setEntryType] = useState('Panel');
   const [csvNumber, setCsvNumber] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
-  const [scannerVisible, setScannerVisible] = useState(false);
+  const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
 
   const [panelStatus, setPanelStatus] = useState<PanelStatus>(null);
   const [panelData, setPanelData] = useState<PanelData | null>(null);
@@ -136,6 +138,7 @@ const ShippingManagementScreen: React.FC<{
           `${API_ROUTES.PANEL_BY_CSV}/${csv.trim()}`,
         );
         const json = await res.json();
+
 
         if (json.success) {
           const data = json.data as PanelData;
@@ -223,9 +226,7 @@ const ShippingManagementScreen: React.FC<{
     [entryType, fetchPanelStatus, fetchTrimBoxStatus],
   );
 
-  const handleBarcodePress = useCallback(() => {
-    setScannerVisible(true);
-  }, []);
+  const handleBarcodePress = openScanner;
 
   // ─── Trim Box status card ─────────────────────────────────────────────────
 
@@ -564,7 +565,8 @@ const ShippingManagementScreen: React.FC<{
                 label="Order Number"
                 placeholder=""
                 value={orderNumber}
-                onChangeText={setOrderNumber}
+                onChangeText={v => setOrderNumber(toDigitsOnly(v))}
+                keyboardType="number-pad"
                 rightIconName="barcode-outline"
                 onRightPress={handleBarcodePress}
                 returnKeyType="search"
@@ -650,7 +652,7 @@ const ShippingManagementScreen: React.FC<{
             />
             <TouchableOpacity
               style={styles.scannerClose}
-              onPress={() => setScannerVisible(false)}
+              onPress={closeScanner}
             >
               <CustomText size={FontSize.normalLargeText} color={COLORS.white}>
                 Close

@@ -8,6 +8,7 @@ import CustomDropdown from '../components/CustomDropdown';
 import { COLORS } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
+import { toDigitsOnly } from '../utils/input';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { apiClient } from '../services/apiClient';
 import { API_ROUTES } from '../services/ApiRoutes';
@@ -215,8 +216,8 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
               label="Box Number"
               placeholder=""
               value={boxNumber}
-              onChangeText={setBoxNumber}
-              keyboardType="numeric"
+              onChangeText={v => setBoxNumber(toDigitsOnly(v))}
+              keyboardType="number-pad"
             />
           )}
           {renderDynamicFields()}

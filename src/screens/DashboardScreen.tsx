@@ -13,7 +13,6 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import Ionicons from '@react-native-vector-icons/ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import Header from '../components/Header';
@@ -32,13 +31,15 @@ import type { DashboardNavigationProp } from '../navigation/types';
 import type { Shipment, ShipmentStatus } from '../types/shipment';
 import CustomInput from '../components/CustomInput';
 import { Camera } from 'react-native-camera-kit';
+import useBackHandler from '../hooks/useBackHandler';
+import useCameraScanner from '../hooks/useCameraScanner';
 
 const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   navigation,
 }) => {
   const [logoutVisible, setLogoutVisible] = useState(false);
   const insets = useSafeAreaInsets();
-  const [scannerVisible, setScannerVisible] = useState(false);
+  const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
 
   const {
     shipments,
@@ -56,6 +57,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   const pendingUploadEntries = usePendingUploadsStore(
     state => state.pendingUploads,
   );
+  const handleBack = useBackHandler(navigation);
 
   const displayShipments = useMemo<
     Array<{ shipment: Shipment; displayStatus: ShipmentStatus }>
@@ -105,11 +107,9 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         text2: codeStringValue,
       });
 
-      setTimeout(() => {
-        setScannerVisible(false);
-      }, 800);
+      setTimeout(closeScanner, 800);
     },
-    [],
+    [closeScanner],
   );
 
   const handleSync = useCallback(async () => {
@@ -267,7 +267,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         onPress={() =>
           // Prevent navigation while a sync/refresh is in progress
           !(isLoading || isSyncing) &&
-          navigation.navigate('ShipmentDetail', {
+          navigation.navigate('DeliveryShippingDetails', {
             shipmentId: item.shipment.id,
             bolNumber: item.shipment.bolNumber,
           })
@@ -285,11 +285,11 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   return (
     <View style={styles.root}>
       <Header
-        title="Dashboard"
-        leftIconName="log-out-outline"
-        onLeftPress={() => setLogoutVisible(true)}
+        title="Shipment List"
+        leftIconName="arrow-back"
+        onLeftPress={handleBack}
         rightIconName="barcode-outline"
-        onRightPress={() => setScannerVisible(true)}
+        onRightPress={openScanner}
       />
 
       {!isConnected && (
@@ -299,33 +299,6 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
           </CustomText>
         </View>
       )}
-
-      <View style={styles.welcomeContainer}>
-        <View style={styles.welcomeIconWrapper}>
-          <Ionicons
-            name="person-circle-outline"
-            size={wp(8)}
-            color={COLORS.primary}
-          />
-        </View>
-        <View style={styles.welcomeTextWrapper}>
-          <CustomText
-            size={FontSize.normalLargeText}
-            color={COLORS.primary}
-            weight="semibold"
-          >
-            Welcome, {user?.fullName ?? ''}
-          </CustomText>
-          <CustomText
-            size={FontSize.smallMediumText}
-            color={COLORS.greyText}
-            style={{ marginTop: wp(1) }}
-          >
-           Driver
-          </CustomText>
-        </View>
-      </View>
-
       <View style={styles.searchContainer}>
         <CustomInput
           placeholder="Search by BoL / Shipment No..."
@@ -413,9 +386,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
             />
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => {
-                setScannerVisible(false);
-              }}
+              onPress={closeScanner}
             >
               <CustomText
                 size={FontSize.normalText}
@@ -442,28 +413,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: wp(2), // vertical padding → hp
     paddingHorizontal: wp(4), // horizontal padding → wp
-  },
-  welcomeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: wp(4), // horizontal padding → wp
-    paddingVertical: wp(3),
-    marginHorizontal: wp(4),
-    marginTop: wp(4),
-    borderRadius: wp(4),
-    backgroundColor: COLORS.lightgray,
-  },
-  welcomeIconWrapper: {
-    width: wp(12),
-    height: wp(12),
-    borderRadius: wp(12),
-    backgroundColor: COLORS.lightBlue,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: wp(3),
-  },
-  welcomeTextWrapper: {
-    flex: 1,
   },
   searchContainer: {
     paddingHorizontal: wp(4), // horizontal padding → wp

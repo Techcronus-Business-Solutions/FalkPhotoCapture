@@ -3,6 +3,7 @@ import { storage } from '../utils/storage';
 
 export interface AuthUser {
   token: string;
+
   employeeId: string;
   fullName: string;
   email: string;

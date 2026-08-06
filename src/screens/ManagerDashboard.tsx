@@ -24,7 +24,7 @@ const ManagerDashboard: React.FC<{
   const modules = [
     { key: 'shipping', title: 'Shipping Management' },
     { key: 'bendex', title: 'Bendex Box Allocation' },
-    { key: 'driver', title: 'Driver Assignment' },
+    { key: 'dashboard', title: 'Upload Images' },
   ];
 
   const handleLogout = async () => {
@@ -54,13 +54,6 @@ const ManagerDashboard: React.FC<{
             weight="semibold"
           >
             Welcome, {user?.fullName ?? ''}
-          </CustomText>
-          <CustomText
-            size={FontSize.smallMediumText}
-            color={COLORS.greyText}
-            style={{ marginTop: wp(1) }}
-          >
-            Warehouse Manager
           </CustomText>
         </View>
       </View>
@@ -104,8 +97,12 @@ const ManagerDashboard: React.FC<{
           onPress={() => {
             if (selected === 'shipping') {
               navigation.navigate('ShippingManagement');
+            } else if (selected === 'bendex') {
+              navigation.navigate('BendexBoxAllocation');
             } else if (selected === 'driver') {
               navigation.navigate('DriverAllocation');
+            } else if (selected === 'dashboard') {
+              navigation.navigate('Dashboard');
             }
           }}
           style={styles.nextBtn}

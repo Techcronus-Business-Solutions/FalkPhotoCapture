@@ -53,6 +53,7 @@ const LoginScreen: React.FC = () => {
 
     try {
       setLoading(true);
+
       const { user, message } = await authService.login({ username, password });
       await login(user);
       Toast.show({
@@ -60,9 +61,8 @@ const LoginScreen: React.FC = () => {
         text1: 'Login Successful',
         text2: message || 'You are now logged in.',
       });
-      navigation.replace(
-        user.role.toLowerCase() === 'manager' ? 'ManagerDashboard' : 'Dashboard',
-      );
+      navigation.replace('ManagerDashboard');
+
     } catch (err: unknown) {
       Toast.show({
         type: 'error',

@@ -34,16 +34,16 @@ import { getGraphAccessToken } from '../services/AccessTokenProvider';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { usePendingUploadsStore } from '../store/pendingUploadsStore';
 import type {
-  ShipmentDetailNavigationProp,
-  ShipmentDetailRouteProp,
+  UploadImageNavigationProp,
+  UploadImageRouteProp,
 } from '../navigation/types';
 
 const MAX_PHOTOS = 20;
 const EMPTY_PHOTOS: PhotoItem[] = [];
 
-const ShipmentDetailScreen: React.FC<{
-  navigation: ShipmentDetailNavigationProp;
-  route: ShipmentDetailRouteProp;
+const UploadImageScreen: React.FC<{
+  navigation: UploadImageNavigationProp;
+  route: UploadImageRouteProp;
 }> = ({ navigation, route }) => {
   const { shipmentId, bolNumber } = route.params;
   const handleBack = useBackHandler(navigation);
@@ -390,7 +390,7 @@ const ShipmentDetailScreen: React.FC<{
             weight="regular"
             style={{ marginTop: wp(4) }}
           >
-            Sales Order
+            Order Number
           </CustomText>
           <View style={styles.bolContainer}>
             <CustomText
@@ -614,4 +614,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ShipmentDetailScreen;
+export default UploadImageScreen;
