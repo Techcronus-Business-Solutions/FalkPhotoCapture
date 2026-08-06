@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -10,45 +10,36 @@ import useBackHandler from '../hooks/useBackHandler';
 import type {
   PanelLocationNavigationProp,
   PanelLocationRouteProp,
+  PanelLocationItem,
 } from '../navigation/types';
 import CSV from '../assets/images/csv.svg';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type PanelStatus = 'Shipped' | 'On Hold' | 'Active';
-
-interface PanelItem {
-  id: string;
-  panelId: string;
-  status: PanelStatus;
-  location: string;
-}
-
-// ─── Dummy Data (replace with API data later) ────────────────────────────────
-
-const PANEL_LIST: PanelItem[] = [
-  { id: '1', panelId: '2600464P1', status: 'Shipped', location: 'B2' },
-  { id: '2', panelId: '2600464P2', status: 'On Hold', location: 'Shipping' },
-  { id: '3', panelId: '2600464P3', status: 'Active', location: 'C2' },
-];
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const getPanelStatusColor = (status: PanelStatus): string => {
+const getPanelStatusColor = (status: string): string => {
   switch (status) {
     case 'Shipped':
       return COLORS.uploaded;
-    case 'On Hold':
+    case 'QA Hold':
       return COLORS.failed;
     case 'Active':
       return COLORS.orange;
+    default:
+      return COLORS.primary;
   }
+};
+
+const getLocationDisplay = (item: PanelLocationItem): string => {
+  if (item.status === 'Shipped') return 'Shipped';
+  if (item.status === 'QA Hold') return item.holdLocation || item.currentLocation;
+  return item.currentLocation;
 };
 
 // ─── PanelCard ───────────────────────────────────────────────────────────────
 
-const PanelCard: React.FC<{ item: PanelItem }> = ({ item }) => {
+const PanelCard: React.FC<{ item: PanelLocationItem }> = ({ item }) => {
   const statusColor = getPanelStatusColor(item.status);
+  const displayLocation = getLocationDisplay(item);
 
   return (
     <View style={styles.panelCard}>
@@ -62,7 +53,7 @@ const PanelCard: React.FC<{ item: PanelItem }> = ({ item }) => {
           weight="bold"
           style={styles.panelId}
         >
-          {item.panelId}
+          {item.csv}
         </CustomText>
       </View>
 
@@ -84,7 +75,7 @@ const PanelCard: React.FC<{ item: PanelItem }> = ({ item }) => {
             color={statusColor}
             weight="bold"
           >
-            {item.status}
+            {item.status || '—'}
           </CustomText>
         </View>
 
@@ -104,10 +95,11 @@ const PanelCard: React.FC<{ item: PanelItem }> = ({ item }) => {
             color={COLORS.black}
             weight="bold"
           >
-            {item.location}
+            {displayLocation || '—'}
           </CustomText>
         </View>
       </View>
+
     </View>
   );
 };
@@ -119,8 +111,7 @@ const PanelLocationScreen: React.FC<{
   route: PanelLocationRouteProp;
 }> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const { csvNumber } = route.params;
-  const panelList = useMemo(() => PANEL_LIST, []);
+  const { csv, panelLocations } = route.params;
   const handleBack = useBackHandler(navigation);
 
   return (
@@ -158,14 +149,27 @@ const PanelLocationScreen: React.FC<{
               color={COLORS.primary}
               weight="bold"
             >
-              {csvNumber}
+              {csv}
             </CustomText>
           </View>
         </View>
 
+        {/* Empty State */}
+        {panelLocations.length === 0 && (
+          <View style={styles.emptyWrapper}>
+            <CustomText
+              size={FontSize.normalLargeText}
+              color={COLORS.greyText}
+              weight="medium"
+            >
+              No panel locations found.
+            </CustomText>
+          </View>
+        )}
+
         {/* Panel Cards */}
-        {panelList.map(item => (
-          <PanelCard key={item.id} item={item} />
+        {panelLocations.map(item => (
+          <PanelCard key={item.csv} item={item} />
         ))}
       </ScrollView>
     </View>
@@ -245,6 +249,14 @@ const styles = StyleSheet.create({
     height: wp(10),
     backgroundColor: COLORS.border,
     marginHorizontal: wp(4),
+  },
+
+  // ── Empty state ──
+  emptyWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: wp(40),
   },
 });
 

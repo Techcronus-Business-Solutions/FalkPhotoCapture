@@ -1,5 +1,12 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Keyboard,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -13,63 +20,488 @@ import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
 import useCameraScanner from '../hooks/useCameraScanner';
 import { toDigitsOnly } from '../utils/input';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { apiClient } from '../services/apiClient';
+import { API_ROUTES } from '../services/ApiRoutes';
 import type { ShippingManagementNavigationProp } from '../navigation/types';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface PanelData {
+  entityType: string;
+  csv: string;
+  lastScanType: string;
+  currentLocation: string;
+  holdLocation: string;
+  status: string;
+  lastScanTime: string;
+  created: string;
+}
+
+type PanelStatus = 'active' | 'hold' | 'not-found' | 'error' | null;
+
+interface TrimBox {
+  orderNumber: number;
+  entityType: string;
+  boxNumber: number;
+  status: string;
+  currentLocation: string;
+  holdLocation: string;
+}
+
+type TrimBoxStatus = 'active' | 'partial-hold' | 'not-found' | 'error' | null;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const formatScanTime = (iso: string): string => {
+  if (!iso || iso.startsWith('0001')) return '—';
+  return new Date(iso).toLocaleString();
+};
+
+const getLocationDisplay = (
+  data: PanelData,
+): { label: string; value: string } => {
+  const useHold =
+    (data.lastScanType === 'QA Hold' || data.lastScanType === 'Release Hold') &&
+    !!data.holdLocation;
+  return useHold
+    ? { label: 'Hold Location', value: data.holdLocation }
+    : { label: 'Current Location', value: data.currentLocation };
+};
+
+const getBoxLocation = (box: TrimBox): string =>
+  box.status === 'QA Hold' ? box.holdLocation : box.currentLocation;
+
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 const ENTRY_TYPES = [
   { label: 'Panel', value: 'Panel' },
   { label: 'Trip Box', value: 'Trip Box' },
 ];
 
+// ─── Screen ──────────────────────────────────────────────────────────────────
+
 const ShippingManagementScreen: React.FC<{
   navigation: ShippingManagementNavigationProp;
 }> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
+  const { isConnected } = useNetworkStatus();
+
   const [entryType, setEntryType] = useState('Panel');
   const [csvNumber, setCsvNumber] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
   const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
 
-  const handleReadCode = useCallback(
-    (event: { nativeEvent: { codeStringValue: string } }) => {
-      const codeStringValue = event.nativeEvent.codeStringValue;
-      if (!codeStringValue) {
+  const [panelStatus, setPanelStatus] = useState<PanelStatus>(null);
+  const [panelData, setPanelData] = useState<PanelData | null>(null);
+  const [panelMessage, setPanelMessage] = useState('');
+  const [panelLoading, setPanelLoading] = useState(false);
+
+  const [trimBoxStatus, setTrimBoxStatus] = useState<TrimBoxStatus>(null);
+  const [trimBoxList, setTrimBoxList] = useState<TrimBox[]>([]);
+  const [trimBoxMessage, setTrimBoxMessage] = useState('');
+  const [trimBoxLoading, setTrimBoxLoading] = useState(false);
+
+  useEffect(() => {
+    setCsvNumber('');
+    setOrderNumber('');
+    setPanelStatus(null);
+    setPanelData(null);
+    setPanelMessage('');
+    setTrimBoxStatus(null);
+    setTrimBoxList([]);
+    setTrimBoxMessage('');
+  }, [entryType]);
+
+  const fetchPanelStatus = useCallback(
+    async (csv: string) => {
+      if (!csv.trim() || panelLoading) return;
+
+      if (!isConnected) {
+        Toast.show({
+          type: 'error',
+          text1: 'No Internet',
+          text2: 'Please check your internet connection.',
+        });
         return;
       }
 
-      Toast.show({
-        type: 'info',
-        text1: 'BarcodeScanner scanned value',
-        text2: codeStringValue,
-      });
+      Keyboard.dismiss();
+      setPanelData(null);
+      setPanelStatus(null);
+      setPanelMessage('');
+      setPanelLoading(true);
 
-      setTimeout(closeScanner, 800);
+      try {
+        const res = await apiClient.get(
+          `${API_ROUTES.PANEL_BY_CSV}/${csv.trim()}`,
+        );
+        const json = await res.json();
+
+
+        if (json.success) {
+          const data = json.data as PanelData;
+          setPanelData(data);
+          setPanelStatus(data.status === 'QA Hold' ? 'hold' : 'active');
+        } else {
+          setPanelMessage(json.message || 'Panel not found.');
+          setPanelStatus('not-found');
+        }
+      } catch {
+        setPanelMessage('Failed to fetch panel status. Please try again.');
+        setPanelStatus('error');
+      } finally {
+        setPanelLoading(false);
+      }
     },
-    [closeScanner],
+    [isConnected, panelLoading],
   );
 
-  const tripBoxDetails = useMemo(
-    () => [
-      {
-        boxName: 'Box 1',
-        status: 'Active',
-        location: 'B2',
-      },
-      {
-        boxName: 'Box 2',
-        status: 'Active',
-        location: 'C2',
-      },
-      {
-        boxName: 'Box 3',
-        status: 'Active',
-        location: 'D1',
-      },
-    ],
-    [],
+  const fetchTrimBoxStatus = useCallback(
+    async (order: string) => {
+      if (!order.trim() || trimBoxLoading) return;
+
+      if (!isConnected) {
+        Toast.show({
+          type: 'error',
+          text1: 'No Internet',
+          text2: 'Please check your internet connection.',
+        });
+        return;
+      }
+
+      Keyboard.dismiss();
+      setTrimBoxList([]);
+      setTrimBoxStatus(null);
+      setTrimBoxMessage('');
+      setTrimBoxLoading(true);
+
+      try {
+        const res = await apiClient.get(
+          `${API_ROUTES.TRIM_BOX_BY_ORDER}/${order.trim()}`,
+        );
+        const json = await res.json();
+
+        if (json.success && (json.data as TrimBox[]).length > 0) {
+          const sorted = [...(json.data as TrimBox[])].sort(
+            (a, b) => a.boxNumber - b.boxNumber,
+          );
+          setTrimBoxList(sorted);
+          const hasHold = sorted.some(b => b.status === 'QA Hold');
+          setTrimBoxStatus(hasHold ? 'partial-hold' : 'active');
+        } else {
+          setTrimBoxMessage(json.message || 'No trim boxes found.');
+          setTrimBoxStatus('not-found');
+        }
+      } catch {
+        setTrimBoxMessage('Failed to fetch trim box status. Please try again.');
+        setTrimBoxStatus('error');
+      } finally {
+        setTrimBoxLoading(false);
+      }
+    },
+    [isConnected, trimBoxLoading],
+  );
+
+  const handleReadCode = useCallback(
+    (event: { nativeEvent: { codeStringValue: string } }) => {
+      const scanned = event.nativeEvent.codeStringValue;
+      if (!scanned) return;
+
+      if (entryType === 'Panel') {
+        setCsvNumber(scanned);
+      } else {
+        setOrderNumber(scanned);
+      }
+
+      setScannerVisible(false);
+
+      if (entryType === 'Panel') {
+        fetchPanelStatus(scanned);
+      } else {
+        fetchTrimBoxStatus(scanned);
+      }
+    },
+    [entryType, fetchPanelStatus, fetchTrimBoxStatus],
   );
 
   const handleBarcodePress = openScanner;
+
+  // ─── Trim Box status card ─────────────────────────────────────────────────
+
+  const renderTrimBoxStatusCard = () => {
+    if (trimBoxLoading) {
+      return (
+        <View style={styles.panelStatusCard}>
+          <ActivityIndicator
+            size="small"
+            color={COLORS.primary}
+            style={styles.panelLoader}
+          />
+        </View>
+      );
+    }
+
+    if (trimBoxStatus === null) return null;
+
+    if (trimBoxStatus === 'not-found' || trimBoxStatus === 'error') {
+      return (
+        <View style={styles.panelStatusCard}>
+          <View style={[styles.panelTopRow, { marginBottom: 0 }]}>
+            <Ionicons
+              style={styles.panelIconWrapper}
+              name="close-circle"
+              size={wp(10)}
+              color={COLORS.failed}
+            />
+            <View style={styles.panelTextWrapper}>
+              <CustomText
+                size={FontSize.normalLargeText}
+                color={COLORS.failed}
+                weight="semibold"
+              >
+                Not Found
+              </CustomText>
+              <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+                {trimBoxMessage}
+              </CustomText>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    const isAllActive = trimBoxStatus === 'active';
+    const bannerColor = isAllActive ? COLORS.uploaded : COLORS.orange;
+    const bannerText = isAllActive
+      ? `ACTIVE — ${trimBoxList.length} BOXES`
+      : `BOXES FOUND — ${trimBoxList.length} (PARTIAL HOLD)`;
+
+    return (
+      <View style={styles.panelStatusCard}>
+        <View style={styles.panelTopRow}>
+          <Ionicons
+            style={styles.panelIconWrapper}
+            name={isAllActive ? 'checkmark-circle' : 'alert-circle'}
+            size={wp(10)}
+            color={bannerColor}
+          />
+          <View style={styles.panelTextWrapper}>
+            <CustomText
+              size={FontSize.normalLargeText}
+              color={bannerColor}
+              weight="semibold"
+            >
+              {bannerText}
+            </CustomText>
+          </View>
+        </View>
+        {trimBoxList.map(box => (
+          <View key={box.boxNumber} style={styles.tripBoxRow}>
+            <View style={styles.tripBoxIconWrapper}>
+              <Ionicons
+                name="cube-outline"
+                size={wp(8)}
+                color={COLORS.primary}
+              />
+            </View>
+            <View style={styles.tripBoxTextWrapper}>
+              <CustomText
+                size={FontSize.smallText}
+                color={COLORS.black}
+                weight="semibold"
+              >
+                {`Box ${box.boxNumber}`}
+              </CustomText>
+              <CustomText size={FontSize.normalText} color={COLORS.black}>
+                Status: {box.status}
+              </CustomText>
+              <CustomText size={FontSize.normalText} color={COLORS.greyText}>
+                Location: {getBoxLocation(box)}
+              </CustomText>
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  // ─── Panel data rows (shared between active and hold cards) ──────────────
+
+  const renderPanelDataRows = (data: PanelData) => (
+    <>
+      <View style={styles.divider} />
+      <View style={styles.panelDataRow}>
+        <Ionicons
+          name="trending-up-outline"
+          size={wp(8)}
+          color={COLORS.primary}
+          style={styles.panelDataIcon}
+        />
+        <View style={styles.panelDataText}>
+          <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+            Status
+          </CustomText>
+          <CustomText
+            size={FontSize.normalText}
+            color={COLORS.black}
+            weight="semibold"
+          >
+            {data.status}
+          </CustomText>
+        </View>
+      </View>
+      <View style={styles.divider} />
+      <View style={styles.panelDataRow}>
+        <Ionicons
+          name="scan-outline"
+          size={wp(8)}
+          color={COLORS.primary}
+          style={styles.panelDataIcon}
+        />
+        <View style={styles.panelDataText}>
+          <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+            Last Scan Type
+          </CustomText>
+          <CustomText
+            size={FontSize.normalText}
+            color={COLORS.black}
+            weight="semibold"
+          >
+            {data.lastScanType}
+          </CustomText>
+        </View>
+      </View>
+      <View style={styles.divider} />
+      <View style={styles.panelDataRow}>
+        <Ionicons
+          name="calendar-outline"
+          size={wp(8)}
+          color={COLORS.primary}
+          style={styles.panelDataIcon}
+        />
+        <View style={styles.panelDataText}>
+          <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+            Last Scan Time
+          </CustomText>
+          <CustomText
+            size={FontSize.normalText}
+            color={COLORS.black}
+            weight="semibold"
+          >
+            {formatScanTime(data.lastScanTime)}
+          </CustomText>
+        </View>
+      </View>
+    </>
+  );
+
+  // ─── Panel status card ────────────────────────────────────────────────────
+
+  const renderPanelStatusCard = () => {
+    if (panelLoading) {
+      return (
+        <View style={styles.panelStatusCard}>
+          <ActivityIndicator
+            size="small"
+            color={COLORS.primary}
+            style={styles.panelLoader}
+          />
+        </View>
+      );
+    }
+
+    if (panelStatus === null) return null;
+
+    if (panelStatus === 'not-found' || panelStatus === 'error') {
+      return (
+        <View style={styles.panelStatusCard}>
+          <View style={[styles.panelTopRow, { marginBottom: 0 }]}>
+            <Ionicons
+              style={styles.panelIconWrapper}
+              name="close-circle"
+              size={wp(10)}
+              color={COLORS.failed}
+            />
+            <View style={styles.panelTextWrapper}>
+              <CustomText
+                size={FontSize.normalLargeText}
+                color={COLORS.failed}
+                weight="semibold"
+              >
+                Not Found
+              </CustomText>
+              <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+                {panelMessage}
+              </CustomText>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    if (panelStatus === 'hold' && panelData) {
+      return (
+        <View style={styles.panelStatusCard}>
+          <View style={styles.panelTopRow}>
+            <Ionicons
+              style={styles.panelIconWrapper}
+              name="alert-circle"
+              size={wp(10)}
+              color={COLORS.orange}
+            />
+            <View style={styles.panelTextWrapper}>
+              <CustomText
+                size={FontSize.normalLargeText}
+                color={COLORS.orange}
+                weight="semibold"
+              >
+                On Hold
+              </CustomText>
+              <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+                {`Hold location: ${panelData.holdLocation}`}
+              </CustomText>
+            </View>
+          </View>
+          {renderPanelDataRows(panelData)}
+        </View>
+      );
+    }
+
+    if (panelStatus === 'active' && panelData) {
+      const loc = getLocationDisplay(panelData);
+      return (
+        <View style={styles.panelStatusCard}>
+          <View style={styles.panelTopRow}>
+            <Ionicons
+              style={styles.panelIconWrapper}
+              name="checkmark-circle"
+              size={wp(10)}
+              color={COLORS.uploaded}
+            />
+            <View style={styles.panelTextWrapper}>
+              <CustomText
+                size={FontSize.normalLargeText}
+                color={COLORS.uploaded}
+                weight="semibold"
+              >
+                {`Active`}
+              </CustomText>
+              <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+                {`${loc.label}: ${loc.value}`}
+              </CustomText>
+            </View>
+          </View>
+          {renderPanelDataRows(panelData)}
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  // ─── JSX ─────────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.root}>
@@ -122,6 +554,8 @@ const ShippingManagementScreen: React.FC<{
               onChangeText={setCsvNumber}
               rightIconName="barcode-outline"
               onRightPress={handleBarcodePress}
+              returnKeyType="search"
+              onSubmitEditing={() => fetchPanelStatus(csvNumber)}
             />
           )}
 
@@ -135,145 +569,16 @@ const ShippingManagementScreen: React.FC<{
                 keyboardType="number-pad"
                 rightIconName="barcode-outline"
                 onRightPress={handleBarcodePress}
+                returnKeyType="search"
+                onSubmitEditing={() => fetchTrimBoxStatus(orderNumber)}
               />
             </>
           )}
         </View>
 
-        {entryType === 'Panel' ? (
-          <View style={styles.panelStatusCard}>
-            <View style={styles.panelTopRow}>
-              <Ionicons
-                style={styles.panelIconWrapper}
-                name="checkmark-circle"
-                size={wp(10)}
-                color={COLORS.uploaded}
-              />
-              <View style={styles.panelTextWrapper}>
-                <CustomText
-                  size={FontSize.normalLargeText}
-                  color={COLORS.primary}
-                  weight="semibold"
-                >
-                  Active - A5
-                </CustomText>
-                <CustomText size={FontSize.smallText} color={COLORS.greyText}>
-                  Current Location: A5
-                </CustomText>
-              </View>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.panelDataRow}>
-              <Ionicons
-                name="trending-up-outline"
-                size={wp(8)}
-                color={COLORS.primary}
-                style={styles.panelDataIcon}
-              />
-              <View style={styles.panelDataText}>
-                <CustomText size={FontSize.smallText} color={COLORS.greyText}>
-                  Status
-                </CustomText>
-                <CustomText
-                  size={FontSize.normalText}
-                  color={COLORS.black}
-                  weight="semibold"
-                >
-                  Shipped
-                </CustomText>
-              </View>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.panelDataRow}>
-              <Ionicons
-                name="scan-outline"
-                size={wp(8)}
-                color={COLORS.primary}
-                style={styles.panelDataIcon}
-              />
-              <View style={styles.panelDataText}>
-                <CustomText size={FontSize.smallText} color={COLORS.greyText}>
-                  Last Scan Type
-                </CustomText>
-                <CustomText
-                  size={FontSize.normalText}
-                  color={COLORS.black}
-                  weight="semibold"
-                >
-                  Move
-                </CustomText>
-              </View>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.panelDataRow}>
-              <Ionicons
-                name="calendar-outline"
-                size={wp(8)}
-                color={COLORS.primary}
-                style={styles.panelDataIcon}
-              />
-              <View style={styles.panelDataText}>
-                <CustomText size={FontSize.smallText} color={COLORS.greyText}>
-                  Last Scan Time
-                </CustomText>
-                <CustomText
-                  size={FontSize.normalText}
-                  color={COLORS.black}
-                  weight="semibold"
-                >
-                  3/9/2026, 10:12 AM
-                </CustomText>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.statusCard}>
-            <View style={styles.statusHeader}>
-              <Ionicons
-                name="checkmark-circle"
-                size={wp(10)}
-                color={COLORS.primary}
-                style={{ marginRight: wp(3) }}
-              />
-              <CustomText
-                size={FontSize.normalLargeText}
-                color={COLORS.primary}
-                weight="semibold"
-              >
-                Current Status
-              </CustomText>
-            </View>
-            {tripBoxDetails.map(item => (
-              <View key={item.boxName} style={styles.tripBoxRow}>
-                <View style={styles.tripBoxIconWrapper}>
-                  <Ionicons
-                    name="cube-outline"
-                    size={wp(8)}
-                    color={COLORS.primary}
-                  />
-                </View>
-                <View style={styles.tripBoxTextWrapper}>
-                  <CustomText
-                    size={FontSize.smallText}
-                    color={COLORS.black}
-                    weight="semibold"
-                  >
-                    {item.boxName}
-                  </CustomText>
-                  <CustomText size={FontSize.normalText} color={COLORS.black}>
-                    Status: {item.status}
-                  </CustomText>
-                  <CustomText
-                    size={FontSize.normalText}
-                    color={COLORS.greyText}
-                  >
-                    Location: {item.location}
-                  </CustomText>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+        {entryType === 'Panel'
+          ? renderPanelStatusCard()
+          : renderTrimBoxStatusCard()}
       </ScrollView>
 
       <View
@@ -304,7 +609,23 @@ const ShippingManagementScreen: React.FC<{
         <TouchableOpacity
           activeOpacity={0.8}
           style={[styles.actionButton, styles.primaryAction]}
-          onPress={() => navigation.navigate('ShippingDetails')}
+          onPress={() => {
+            const identifier = entryType === 'Panel' ? csvNumber : orderNumber;
+            if (!identifier.trim()) {
+              Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2:
+                  'Please enter a valid identifier before viewing shipment details.',
+              });
+              return;
+            }
+
+            navigation.navigate('ShippingDetails', {
+              entityType: entryType === 'Panel' ? 'Panel' : 'Trip Box',
+              identifier,
+            });
+          }}
         >
           <CustomText
             size={FontSize.normalText}
@@ -343,6 +664,8 @@ const ShippingManagementScreen: React.FC<{
     </View>
   );
 };
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   root: {
@@ -387,9 +710,6 @@ const styles = StyleSheet.create({
     marginBottom: wp(4),
   },
   panelIconWrapper: {
-    borderRadius: wp(20),
-    justifyContent: 'center',
-    alignItems: 'center',
     marginRight: wp(3),
   },
   panelTextWrapper: {
@@ -410,6 +730,9 @@ const styles = StyleSheet.create({
   divider: {
     height: wp(0.5),
     backgroundColor: COLORS.border,
+  },
+  panelLoader: {
+    marginVertical: wp(4),
   },
   tripBoxRow: {
     flexDirection: 'row',

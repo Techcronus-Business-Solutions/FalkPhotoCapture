@@ -53,18 +53,16 @@ const LoginScreen: React.FC = () => {
 
     try {
       setLoading(true);
-      const result = await authService.login({ username, password });
-      await login({
-        username: result.username,
-        token: result.token,
-        driverID: result.driverID,
-      });
+
+      const { user, message } = await authService.login({ username, password });
+      await login(user);
       Toast.show({
         type: 'success',
         text1: 'Login Successful',
-        text2: result.message || 'You are now logged in.',
+        text2: message || 'You are now logged in.',
       });
       navigation.replace('ManagerDashboard');
+
     } catch (err: unknown) {
       Toast.show({
         type: 'error',
@@ -93,12 +91,8 @@ const LoginScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo */}
           <View style={styles.logoArea}>
             <AppLogo width={wp(50)} height={wp(20)} />
-            {/* <CustomText size={32} color={COLORS.white} weight="bold">
-              FALK
-            </CustomText> */}
             <CustomText
               size={FontSize.hugeText}
               color={COLORS.black}
@@ -112,14 +106,13 @@ const LoginScreen: React.FC = () => {
               color={COLORS.primary}
               style={styles.tagline}
             >
-              Login with your {'\n'}Business Central credentials
+              Login with your {'\n'}registered account
             </CustomText>
           </View>
 
-          {/* Form card */}
           <View style={{ marginTop: wp(5) }}>
             <CustomInput2
-              label="Username"
+              label="Email"
               placeholder=""
               value={username}
               onChangeText={setUsername}
