@@ -1,7 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 import Header from '../components/Header';
 import CustomInput2 from '../components/CustomInput2';
 import CustomDropdown from '../components/CustomDropdown';
@@ -9,9 +8,6 @@ import { COLORS } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
 import { toDigitsOnly } from '../utils/input';
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { apiClient } from '../services/apiClient';
-import { API_ROUTES } from '../services/ApiRoutes';
 import type {
   ScanTypeNavigationProp,
   ScanTypeRouteProp,
@@ -28,8 +24,26 @@ const SCAN_TYPES = [
   { label: 'Release Hold', value: 'Release Hold' },
 ];
 
-const toDropdownOptions = (items: string[]) =>
-  items.map(item => ({ label: item, value: item }));
+const LOCATION_OPTIONS = [
+  { label: 'QC1', value: 'QC1' },
+  { label: 'QC2', value: 'QC2' },
+  { label: 'QCTRM', value: 'QCTRM' },
+];
+
+const HOLD_REASON_OPTIONS = [
+  { label: 'Damage (forklift/handling)', value: 'Damage (forklift/handling)' },
+  { label: 'Wrap / Packaging issue', value: 'Wrap / Packaging issue' },
+  { label: 'Missing Components', value: 'Missing Components' },
+  { label: 'QC dimensional issue', value: 'QC dimensional issue' },
+  { label: 'Finish/Coating issue', value: 'Finish/Coating issue' },
+  { label: 'Labeling / ID issue', value: 'Labeling / ID issue' },
+  { label: 'Documentation hold', value: 'Documentation hold' },
+  {
+    label: 'Customer change / pending approval',
+    value: 'Customer change / pending approval',
+  },
+  { label: 'Other', value: 'Other' },
+];
 
 interface ScanTypeScreenProps {
   navigation: ScanTypeNavigationProp;
@@ -43,7 +57,6 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   const { csvNumber, entryType } = route.params;
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
-  const { isConnected } = useNetworkStatus();
 
   const [scanType, setScanType] = useState<ScanTypeValue>('Load');
   const [boxNumber, setBoxNumber] = useState('');
@@ -52,67 +65,6 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   const [holdLocation, setHoldLocation] = useState('');
   const [holdReason, setHoldReason] = useState('');
   const [holdNotes, setHoldNotes] = useState('');
-
-  const [holdLocationOptions, setHoldLocationOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
-  const [holdReasonOptions, setHoldReasonOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
-  const [masterDataLoading, setMasterDataLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchMasterData = async () => {
-      if (!isConnected) {
-        Toast.show({
-          type: 'error',
-          text1: 'No Internet',
-          text2: 'Please check your internet connection.',
-        });
-        return;
-      }
-
-      setMasterDataLoading(true);
-      try {
-        const [locRes, reasonRes] = await Promise.all([
-          apiClient.getPublic(API_ROUTES.HOLD_LOCATION_OPTIONS),
-          apiClient.getPublic(API_ROUTES.HOLD_REASON_OPTIONS),
-        ]);
-
-        const locJson = await locRes.json();
-        if (locJson.success) {
-          setHoldLocationOptions(toDropdownOptions(locJson.data.holdLocations));
-        } else {
-          Toast.show({
-            type: 'error',
-            text1: 'Error',
-            text2: locJson.message || 'Failed to load hold location options.',
-          });
-        }
-
-        const reasonJson = await reasonRes.json();
-        if (reasonJson.success) {
-          setHoldReasonOptions(toDropdownOptions(reasonJson.data.holdReasons));
-        } else {
-          Toast.show({
-            type: 'error',
-            text1: 'Error',
-            text2: reasonJson.message || 'Failed to load hold reason options.',
-          });
-        }
-      } catch {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: 'Failed to load master data. Please try again.',
-        });
-      } finally {
-        setMasterDataLoading(false);
-      }
-    };
-
-    fetchMasterData();
-  }, [isConnected]);
 
   const handleScanTypeChange = useCallback((value: string) => {
     setScanType(value as ScanTypeValue);
@@ -144,30 +96,20 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
     if (scanType === 'QA Hold') {
       return (
         <>
-          {masterDataLoading ? (
-            <ActivityIndicator
-              size="small"
-              color={COLORS.primary}
-              style={styles.loader}
-            />
-          ) : (
-            <>
-              <CustomDropdown
-                label="Hold Location"
-                placeholder="Find Items"
-                options={holdLocationOptions}
-                value={holdLocation}
-                onValueChange={setHoldLocation}
-              />
-              <CustomDropdown
-                label="Hold Reason"
-                placeholder="Find Items"
-                options={holdReasonOptions}
-                value={holdReason}
-                onValueChange={setHoldReason}
-              />
-            </>
-          )}
+          <CustomDropdown
+            label="Hold Location"
+            placeholder="Find Items"
+            options={LOCATION_OPTIONS}
+            value={holdLocation}
+            onValueChange={setHoldLocation}
+          />
+          <CustomDropdown
+            label="Hold Reason"
+            placeholder="Find Items"
+            options={HOLD_REASON_OPTIONS}
+            value={holdReason}
+            onValueChange={setHoldReason}
+          />
           <CustomInput2
             label="Hold Notes"
             placeholder="Notes"
@@ -273,9 +215,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.primary,
-  },
-  loader: {
-    marginVertical: wp(4),
   },
 });
 

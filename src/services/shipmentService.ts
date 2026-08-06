@@ -61,13 +61,13 @@ const mapApiShipmentToShipment = (item: any): Shipment => {
 export const shipmentService = {
   fetchShipments: async (): Promise<Shipment[]> => {
     const accessToken = await getAccessToken();
-    const employeeId = useAuthStore.getState().user?.employeeId;
+    const driverID = useAuthStore.getState().user?.driverID;
 
     // Build URL with query parameters
     const url = new URL(SHIPMENTS_BASE_URL);
     url.searchParams.append('$expand', 'sharePointLinks');
-    if (employeeId) {
-      url.searchParams.append('$filter', `driver eq '${employeeId}'`);
+    if (driverID) {
+      url.searchParams.append('$filter', `driver eq '${driverID}'`);
     }
 
     /*

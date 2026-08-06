@@ -52,7 +52,6 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     searchShipments,
   } = useShipmentStore();
   const logout = useAuthStore(state => state.logout);
-  const user = useAuthStore(state => state.user);
   const { isConnected } = useNetworkStatus();
   const pendingUploadEntries = usePendingUploadsStore(
     state => state.pendingUploads,
@@ -299,6 +298,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
           </CustomText>
         </View>
       )}
+
       <View style={styles.searchContainer}>
         <CustomInput
           placeholder="Search by BoL / Shipment No..."

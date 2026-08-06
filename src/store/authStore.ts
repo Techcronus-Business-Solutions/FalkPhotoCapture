@@ -1,22 +1,18 @@
 import { create } from 'zustand';
 import { storage } from '../utils/storage';
 
-export interface AuthUser {
+interface User {
+  username: string;
   token: string;
-
-  employeeId: string;
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  status: string;
-  role: string;
+  role?: 'driver' | 'manager';
+  driverID?: string;
 }
 
 interface AuthState {
-  user: AuthUser | null;
+  user: User | null;
   isLoggedIn: boolean;
   isHydrated: boolean;
-  login: (user: AuthUser) => Promise<void>;
+  login: (user: User) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
 }
@@ -27,11 +23,11 @@ export const useAuthStore = create<AuthState>(set => ({
   isHydrated: false,
 
   hydrate: async () => {
-    const user = await storage.getItem<AuthUser>(storage.KEYS.AUTH_USER);
+    const user = await storage.getItem<User>(storage.KEYS.AUTH_USER);
     set({ user, isLoggedIn: !!user, isHydrated: true });
   },
 
-  login: async (user: AuthUser) => {
+  login: async (user: User) => {
     await storage.setItem(storage.KEYS.AUTH_USER, user);
     set({ user, isLoggedIn: true });
   },
