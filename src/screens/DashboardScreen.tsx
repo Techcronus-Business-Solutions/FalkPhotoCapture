@@ -52,7 +52,6 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
     searchShipments,
   } = useShipmentStore();
   const logout = useAuthStore(state => state.logout);
-  const user = useAuthStore(state => state.user);
   const { isConnected } = useNetworkStatus();
   const pendingUploadEntries = usePendingUploadsStore(
     state => state.pendingUploads,

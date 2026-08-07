@@ -1,4 +1,5 @@
 import { storage } from '../utils/storage';
+import { handle401, SessionExpiredError } from '../utils/handle401';
 
 const getAuthHeaders = async (): Promise<Record<string, string>> => {
   const user = await storage.getItem<{ token: string }>(storage.KEYS.AUTH_USER);
@@ -8,13 +9,20 @@ const getAuthHeaders = async (): Promise<Record<string, string>> => {
   return {};
 };
 
+const intercept401 = async (response: Response): Promise<Response> => {
+  if (response.status !== 401) return response;
+  handle401();
+  throw new SessionExpiredError();
+};
+
 export const apiClient = {
   get: async (url: string): Promise<Response> => {
     const authHeaders = await getAuthHeaders();
-    return fetch(url, {
+    const response = await fetch(url, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
     });
+    return intercept401(response);
   },
 
   getPublic: async (url: string): Promise<Response> => {
@@ -26,10 +34,11 @@ export const apiClient = {
 
   post: async (url: string, body: unknown): Promise<Response> => {
     const authHeaders = await getAuthHeaders();
-    return fetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify(body),
     });
+    return intercept401(response);
   },
 };

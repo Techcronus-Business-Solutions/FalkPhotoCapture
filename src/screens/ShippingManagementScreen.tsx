@@ -215,7 +215,7 @@ const ShippingManagementScreen: React.FC<{
         setOrderNumber(scanned);
       }
 
-      setScannerVisible(false);
+      closeScanner();
 
       if (entryType === 'Panel') {
         fetchPanelStatus(scanned);
@@ -223,7 +223,7 @@ const ShippingManagementScreen: React.FC<{
         fetchTrimBoxStatus(scanned);
       }
     },
-    [entryType, fetchPanelStatus, fetchTrimBoxStatus],
+    [entryType, fetchPanelStatus, fetchTrimBoxStatus, closeScanner],
   );
 
   const handleBarcodePress = openScanner;
