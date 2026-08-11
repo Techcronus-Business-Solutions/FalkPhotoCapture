@@ -18,16 +18,24 @@ const useBackHandler = (
   onData?: () => void,
 ): (() => void) => {
   const handleBack = useCallback(() => {
-    navigation.goBack();
-    onData?.();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      onData?.();
+    }
   }, [navigation, onData]);
 
   useEffect(() => {
     // Android hardware back — intercept and unify with the other paths
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleBack();
-      return true;
-    });
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (!navigation.canGoBack()) {
+          return false;
+        }
+        handleBack();
+        return true;
+      },
+    );
 
     // iOS swipe-back — navigation is already in progress; only fire callback
     const unsubscribe = navigation.addListener('beforeRemove', e => {

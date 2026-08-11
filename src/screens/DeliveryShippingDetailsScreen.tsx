@@ -82,8 +82,9 @@ const DeliveryShippingDetailsScreen: React.FC<{
     navigation.navigate('UploadImage', {
       shipmentId: shipmentBol.bol,
       bolNumber: shipmentBol.bol,
+      images: shipmentBol.images,
     });
-  }, [navigation, shipmentBol.bol]);
+  }, [navigation, shipmentBol]);
 
   return (
     <View style={styles.root}>

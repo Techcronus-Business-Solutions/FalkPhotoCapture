@@ -38,6 +38,7 @@ export type RootStackParamList = {
   UploadImage: {
     shipmentId: string;
     bolNumber: string;
+    images: import('../types/shipment').ShipmentBOLImage[];
   };
   ScanType: {
     entityType: 'Panel' | 'Trim Box';

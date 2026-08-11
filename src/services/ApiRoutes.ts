@@ -1,4 +1,5 @@
 const BASE_URL = 'http://192.168.1.162:8080/api';
+export const API_BASE_HOST = 'http://192.168.1.162:8080';
 
 export const API_ROUTES = {
   LOGIN: `${BASE_URL}/Login`,

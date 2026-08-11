@@ -19,6 +19,7 @@ import Header from '../components/Header';
 import ShipmentCard from '../components/ShipmentCard';
 import CustomButton from '../components/CustomButton';
 import EmptyView from '../components/EmptyView';
+import Loader from '../components/Loader';
 import LogoutModal from '../components/LogoutModal';
 import CustomText from '../components/CustomText';
 import { COLORS, FontSize } from '../assets/constants';
@@ -85,7 +86,9 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   const initialLoadRequestedRef = useRef(false);
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const isSyncingRef = useRef(false);
+  const isRefreshingRef = useRef(false);
   const wasConnectedRef = useRef(isConnected);
 
   const handleReadCode = useCallback(
@@ -108,7 +111,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   );
 
   const handleSync = useCallback(async () => {
-    if (isSyncingRef.current) return;
+    if (isSyncingRef.current || isRefreshingRef.current) return;
     if (!isConnected) {
       Toast.show({
         type: 'error',
@@ -117,9 +120,10 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       });
       return;
     }
-    // immediate guard to prevent double-starts (double-tap or concurrent calls)
+
     isSyncingRef.current = true;
     setIsSyncing(true);
+
     try {
       await syncPendingUploads();
 
@@ -151,6 +155,37 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       setIsSyncing(false);
     }
   }, [isConnected, syncShipments, syncPendingUploads]);
+
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshingRef.current || isSyncingRef.current) return;
+    if (!isConnected) {
+      Toast.show({
+        type: 'error',
+        text1: 'Offline',
+        text2: 'No internet connection. Connect to refresh.',
+      });
+      return;
+    }
+
+    isRefreshingRef.current = true;
+    setIsRefreshing(true);
+
+    try {
+      await syncShipments();
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Refresh Error',
+        text2:
+          error instanceof Error
+            ? error.message
+            : 'Unable to refresh shipments. Please try again.',
+      });
+    } finally {
+      isRefreshingRef.current = false;
+      setIsRefreshing(false);
+    }
+  }, [isConnected, syncShipments]);
 
   useEffect(() => {
     usePendingUploadsStore
@@ -331,15 +366,13 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         ]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <EmptyView
-            message={isLoading ? 'Syncing...' : 'No shipments found.'}
-            iconName="cube-outline"
-          />
+          <EmptyView message="No shipments found." iconName="cube-outline" />
         }
         refreshControl={
           <RefreshControl
-            refreshing={isLoading}
-            onRefresh={handleSync}
+            refreshing={false}
+            enabled={!isLoading && !isRefreshing && !isSyncing}
+            onRefresh={handleRefresh}
             tintColor={COLORS.primary}
             colors={[COLORS.primary]}
             title="Syncing..."
@@ -356,13 +389,14 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         <CustomButton
           title="Sync Now"
           onPress={handleSync}
-          loading={isLoading || isSyncing}
           disabled={isLoading || isSyncing}
         />
       </View>
 
+      <Loader visible={isLoading || isRefreshing || isSyncing} fullScreen />
+
       {/* Interaction blocker while syncing/refreshing */}
-      {(isLoading || isSyncing) && (
+      {(isLoading || isRefreshing || isSyncing) && (
         <View style={styles.interactionBlocker} pointerEvents="none" />
       )}
 
@@ -384,10 +418,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
               ratioOverlayColor="rgba(0,0,0,0.5)"
               onReadCode={handleReadCode}
             />
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={closeScanner}
-            >
+            <TouchableOpacity style={styles.closeButton} onPress={closeScanner}>
               <CustomText
                 size={FontSize.normalText}
                 color={COLORS.white}

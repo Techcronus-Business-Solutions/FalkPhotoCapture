@@ -30,7 +30,7 @@ import { usePhotoStore, type PhotoItem } from '../store/photoStore';
 import { useShipmentStore } from '../store/shipmentStore';
 import { useImagePicker } from '../hooks/useImagePicker';
 import { uploadService } from '../services/uploadService';
-import { getGraphAccessToken } from '../services/AccessTokenProvider';
+import { API_BASE_HOST } from '../services/ApiRoutes';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { usePendingUploadsStore } from '../store/pendingUploadsStore';
 import type {
@@ -45,7 +45,7 @@ const UploadImageScreen: React.FC<{
   navigation: UploadImageNavigationProp;
   route: UploadImageRouteProp;
 }> = ({ navigation, route }) => {
-  const { shipmentId, bolNumber } = route.params;
+  const { shipmentId, bolNumber, images } = route.params;
   const handleBack = useBackHandler(navigation);
   const [uploading, setUploading] = useState(false);
   const uploadingRef = useRef(false);
@@ -64,7 +64,8 @@ const UploadImageScreen: React.FC<{
     () => photosByShipment[shipmentId] ?? EMPTY_PHOTOS,
     [photosByShipment, shipmentId],
   );
-  const { updateShipmentStatus, shipments } = useShipmentStore();
+  const { updateShipmentStatus, persistShipments, shipments } =
+    useShipmentStore();
   const shipment = useMemo(
     () => shipments.find(item => item.id === shipmentId),
     [shipments, shipmentId],
@@ -117,67 +118,26 @@ const UploadImageScreen: React.FC<{
   useEffect(() => {
     let isMounted = true;
 
-    const buildServerPhotos = async () => {
-      if (!shipment?.sharePointLinks?.length) {
-        if (isMounted) {
-          setServerPhotos([]);
-        }
-        return;
-      }
-
-      if (!isConnected) {
-        if (isMounted) {
-          setServerPhotos(
-            shipment.sharePointLinks.map(link => ({
-              id: `server-${shipmentId}-${link.attachmentNo}`,
-              uri: link.url1,
-              fileName: link.fileName,
-              isServerImage: true,
-              isPlaceholder: false,
-            })) as PhotoItem[],
-          );
-        }
-        return;
-      }
-
-      try {
-        const token = await getGraphAccessToken();
-
-        if (!isMounted) {
-          return;
-        }
-
+    if (isMounted) {
+      if (!images?.length) {
+        setServerPhotos([]);
+      } else {
         setServerPhotos(
-          shipment.sharePointLinks.map(link => ({
-            id: `server-${shipmentId}-${link.attachmentNo}`,
-            uri: link.url1,
-            headers: { Authorization: `Bearer ${token}` },
-            fileName: link.fileName,
+          images.map((img, idx) => ({
+            id: `server-${shipmentId}-${idx + 1}`,
+            uri: API_BASE_HOST + img.imageUrl,
+            fileName: img.fileName,
             isServerImage: true,
             isPlaceholder: false,
           })) as PhotoItem[],
         );
-      } catch {
-        if (isMounted) {
-          setServerPhotos(
-            shipment.sharePointLinks.map(link => ({
-              id: `server-${shipmentId}-${link.attachmentNo}`,
-              uri: link.url1,
-              fileName: link.fileName,
-              isServerImage: true,
-              isPlaceholder: false,
-            })) as PhotoItem[],
-          );
-        }
       }
-    };
-
-    buildServerPhotos();
+    }
 
     return () => {
       isMounted = false;
     };
-  }, [shipment, shipmentId, isConnected]);
+  }, [images, shipmentId]);
 
   useEffect(() => {
     return () => {
@@ -273,6 +233,7 @@ const UploadImageScreen: React.FC<{
 
       await uploadService.uploadPhotosOffline(shipmentId, bolNumber, photos);
       updateShipmentStatus(shipmentId, 'Offline');
+      await persistShipments();
       await clearPhotos(shipmentId);
       Toast.show({
         type: 'info',
@@ -280,7 +241,7 @@ const UploadImageScreen: React.FC<{
         text2:
           'Images saved locally. They will appear when this record is reopened.',
       });
-      navigation.goBack();
+      navigation.pop(2);
     } catch (err: unknown) {
       updateShipmentStatus(shipmentId, 'Offline');
       Toast.show({
@@ -298,6 +259,7 @@ const UploadImageScreen: React.FC<{
     shipmentId,
     bolNumber,
     updateShipmentStatus,
+    persistShipments,
     navigation,
     clearPhotos,
   ]);
@@ -305,13 +267,9 @@ const UploadImageScreen: React.FC<{
   const renderPhoto = useCallback(
     ({ item }: { item: PhotoItem }) => {
       if (item.isServerImage) {
-        // Server images are read-only. If offline, pass empty uri so
-        // ImageCard shows the placeholder message 'Offline'. When online
-        // we pass the BC-provided Graph URL and token header.
         return (
           <ImageCard
             uri={isConnected ? item.uri : ''}
-            headers={isConnected ? item.headers : undefined}
             onRemove={undefined}
             showPlaceholderOnError
             placeholderMessage={isConnected ? undefined : 'Offline'}

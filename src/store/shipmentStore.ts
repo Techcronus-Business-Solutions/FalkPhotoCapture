@@ -106,6 +106,8 @@ export const useShipmentStore = create<ShipmentState>((set, get) => ({
         shipmentBols: data.shipmentBols ?? [],
       });
       get().searchShipments(data.searchQuery);
+    } else {
+      set({ shipments: [], shipmentBols: [], filteredShipments: [], searchQuery: '' });
     }
   },
 

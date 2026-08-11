@@ -38,7 +38,7 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({
   );
 
   let imageCount = sharePointCount;
-  if (shipment.status === 'Offline') {
+  if (status === 'Offline') {
     imageCount = sharePointCount + pendingCount;
   }
 
