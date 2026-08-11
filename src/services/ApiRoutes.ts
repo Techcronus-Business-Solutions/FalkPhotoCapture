@@ -12,4 +12,5 @@ export const API_ROUTES = {
   SHIPMENT_DETAILS_BY_CSV: `${BASE_URL}/Order/GetShipmentDetailsByCSV`,
   SHIPMENT_DETAILS_BY_ORDER: `${BASE_URL}/Order/GetShipmentDetailsByOrderNo`,
   FULL_ORDER_DETAILS: `${BASE_URL}/Order/GetFullOrderDetails`,
+  SCAN_SHIPMENT: `${BASE_URL}/Shipment/scan`,
 } as const;

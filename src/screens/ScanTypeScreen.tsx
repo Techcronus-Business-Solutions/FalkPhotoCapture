@@ -40,7 +40,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { csvNumber, entryType } = route.params;
+  const { entityType, csv, orderNumber, panelCurrentStatus, trimBoxStatuses } = route.params;
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
   const { isConnected } = useNetworkStatus();
@@ -52,6 +52,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   const [holdLocation, setHoldLocation] = useState('');
   const [holdReason, setHoldReason] = useState('');
   const [holdNotes, setHoldNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const [holdLocationOptions, setHoldLocationOptions] = useState<
     { label: string; value: string }[]
@@ -75,8 +76,8 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
       setMasterDataLoading(true);
       try {
         const [locRes, reasonRes] = await Promise.all([
-          apiClient.getPublic(API_ROUTES.HOLD_LOCATION_OPTIONS),
-          apiClient.getPublic(API_ROUTES.HOLD_REASON_OPTIONS),
+          apiClient.get(API_ROUTES.HOLD_LOCATION_OPTIONS),
+          apiClient.get(API_ROUTES.HOLD_REASON_OPTIONS),
         ]);
 
         const locJson = await locRes.json();
@@ -124,9 +125,90 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
     setHoldNotes('');
   }, []);
 
-  const handleSubmit = useCallback(() => {
-    // TODO: dispatch scan submission
-  }, []);
+  const handleSubmit = useCallback(async () => {
+    if (submitting) return;
+
+    if (entityType === 'Trim Box' && !boxNumber.trim()) {
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a Box Number.' });
+      return;
+    }
+    if ((scanType === 'Load' || scanType === 'Move' || scanType === 'Release Hold') && !location.trim()) {
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a Location.' });
+      return;
+    }
+    if (scanType === 'Ship' && !bol.trim()) {
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a BOL.' });
+      return;
+    }
+    if (scanType === 'QA Hold') {
+      if (!holdLocation) {
+        Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please select a Hold Location.' });
+        return;
+      }
+      if (!holdReason) {
+        Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please select a Hold Reason.' });
+        return;
+      }
+    }
+
+    if (entityType === 'Panel' && panelCurrentStatus === 'QA Hold' && scanType !== 'Release Hold') {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'This panel is currently on QA Hold. Please select "Release Hold" as the Scan Type.',
+      });
+      return;
+    }
+
+    if (entityType === 'Trim Box') {
+      const matchedBox = trimBoxStatuses.find(b => b.boxNumber === Number(boxNumber));
+      if (matchedBox?.status === 'QA Hold' && scanType !== 'Release Hold') {
+        Toast.show({
+          type: 'error',
+          text1: 'Validation Error',
+          text2: 'This Trim Box is currently on QA Hold. Please select "Release Hold" as the Scan Type.',
+        });
+        return;
+      }
+    }
+
+    if (!isConnected) {
+      Toast.show({ type: 'error', text1: 'No Internet', text2: 'Please check your internet connection.' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const body = {
+        csv: entityType === 'Panel' ? csv : '',
+        orderNumber: entityType === 'Trim Box' ? orderNumber : '',
+        boxNumber: entityType === 'Trim Box' ? boxNumber : '0',
+        scanType,
+        location: (scanType === 'Load' || scanType === 'Move' || scanType === 'Release Hold') ? location : '',
+        bol: scanType === 'Ship' ? bol : '',
+        holdLocation: scanType === 'QA Hold' ? holdLocation : '',
+        holdReason: scanType === 'QA Hold' ? holdReason : '',
+        holdNotes: scanType === 'QA Hold' ? holdNotes : '',
+        entityType,
+      };
+
+      console.log('[ScanTypeScreen] Submit request:', { url: API_ROUTES.SCAN_SHIPMENT, body });
+      const res = await apiClient.post(API_ROUTES.SCAN_SHIPMENT, body);
+      const json = await res.json();
+      console.log('[ScanTypeScreen] Submit response:', { status: res.status, json });
+
+      if (json.success) {
+        Toast.show({ type: 'success', text1: 'Success', text2: json.message || 'Scan submitted successfully.' });
+        navigation.goBack();
+      } else {
+        Toast.show({ type: 'error', text1: 'Error', text2: json.message || 'Failed to submit scan.' });
+      }
+    } catch {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to submit scan. Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [submitting, entityType, csv, orderNumber, panelCurrentStatus, trimBoxStatuses, boxNumber, scanType, location, bol, holdLocation, holdReason, holdNotes, isConnected, navigation]);
 
   const renderDynamicFields = () => {
     if (scanType === 'Ship') {
@@ -186,7 +268,6 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
         placeholder=""
         value={location}
         onChangeText={setLocation}
-        keyboardType="numeric"
       />
     );
   };
@@ -194,7 +275,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   return (
     <View style={styles.root}>
       <Header
-        title={csvNumber}
+        title={entityType === 'Panel' ? `CSV - ${csv}` : `Order - ${orderNumber}`}
         leftIconName="arrow-back"
         onLeftPress={handleBack}
       />
@@ -211,7 +292,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
             value={scanType}
             onValueChange={handleScanTypeChange}
           />
-          {entryType === 'Trip Box' && (
+          {entityType === 'Trim Box' && (
             <CustomInput2
               label="Box Number"
               placeholder=""
@@ -230,6 +311,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
         <CustomButton
           title="SUBMIT"
           onPress={handleSubmit}
+          loading={submitting}
           style={styles.nextBtn}
         />
       </View>

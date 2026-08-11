@@ -18,9 +18,7 @@ export const handle401 = (): void => {
   Toast.show({
     type: 'error',
     text1: 'Session Expired',
-    text2:
-      'You have logged in from another device.',
-    visibleTime: 4000,
+    text2: 'You have logged in from another device.',
   });
 
   useAuthStore

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -76,7 +76,7 @@ const getBoxLocation = (box: TrimBox): string =>
 
 const ENTRY_TYPES = [
   { label: 'Panel', value: 'Panel' },
-  { label: 'Trip Box', value: 'Trip Box' },
+  { label: 'Trim Box', value: 'Trim Box' },
 ];
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
@@ -113,6 +113,22 @@ const ShippingManagementScreen: React.FC<{
     setTrimBoxList([]);
     setTrimBoxMessage('');
   }, [entryType]);
+
+  // Keep a ref with the latest refresh logic so the focus listener never goes stale
+  const onFocusRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    onFocusRef.current = () => {
+      if (entryType === 'Panel' && csvNumber.trim()) {
+        fetchPanelStatus(csvNumber);
+      } else if (entryType === 'Trim Box' && orderNumber.trim()) {
+        fetchTrimBoxStatus(orderNumber);
+      }
+    };
+  });
+
+  useEffect(() => {
+    return navigation.addListener('focus', () => onFocusRef.current());
+  }, [navigation]);
 
   const fetchPanelStatus = useCallback(
     async (csv: string) => {
@@ -559,7 +575,7 @@ const ShippingManagementScreen: React.FC<{
             />
           )}
 
-          {entryType === 'Trip Box' && (
+          {entryType === 'Trim Box' && (
             <>
               <CustomInput2
                 label="Order Number"
@@ -589,11 +605,14 @@ const ShippingManagementScreen: React.FC<{
           style={[styles.actionButton, styles.leftButton]}
           onPress={() =>
             navigation.navigate('ScanType', {
-              csvNumber:
-                entryType === 'Panel'
-                  ? 'CSV - ' + csvNumber
-                  : 'Order - ' + orderNumber,
-              entryType: entryType as 'Panel' | 'Trip Box',
+              entityType: entryType as 'Panel' | 'Trim Box',
+              csv: entryType === 'Panel' ? csvNumber : '',
+              orderNumber: entryType === 'Trim Box' ? orderNumber : '',
+              panelCurrentStatus: panelData?.status ?? '',
+              trimBoxStatuses: trimBoxList.map(b => ({
+                boxNumber: b.boxNumber,
+                status: b.status,
+              })),
             })
           }
         >
@@ -622,7 +641,7 @@ const ShippingManagementScreen: React.FC<{
             }
 
             navigation.navigate('ShippingDetails', {
-              entityType: entryType === 'Panel' ? 'Panel' : 'Trip Box',
+              entityType: entryType === 'Panel' ? 'Panel' : 'Trim Box',
               identifier,
             });
           }}

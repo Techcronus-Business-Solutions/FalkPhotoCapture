@@ -22,7 +22,7 @@ export type RootStackParamList = {
     bolNumber: string;
   };
   ShippingDetails: {
-    entityType?: 'Panel' | 'Trip Box';
+    entityType?: 'Panel' | 'Trim Box';
     identifier?: string;
   };
   UploadImage: {
@@ -30,8 +30,11 @@ export type RootStackParamList = {
     bolNumber: string;
   };
   ScanType: {
-    csvNumber: string;
-    entryType: 'Panel' | 'Trip Box';
+    entityType: 'Panel' | 'Trim Box';
+    csv: string;
+    orderNumber: string;
+    panelCurrentStatus: string;
+    trimBoxStatuses: { boxNumber: number; status: string }[];
   };
   OrderFulfillment: { orderNumber: string };
   PanelLocation: {
