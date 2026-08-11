@@ -43,6 +43,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
 
   const {
     shipments,
+    shipmentBols,
     filteredShipments,
     searchQuery,
     isLoading,
@@ -63,26 +64,21 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   >(
     () =>
       filteredShipments.map(shipment => {
-        const status = shipment.status;
-        if (status !== 'Offline') {
-          return { shipment, displayStatus: status };
-        }
-
-        const sharePointCount = shipment.sharePointLinks?.length ?? 0;
         const pendingCount = pendingUploadEntries.filter(
           upload =>
             upload.shipmentNumber === shipment.bolNumber &&
             upload.uploadStatus === 'pending',
         ).length;
 
-        if (pendingCount === 0) {
-          return {
-            shipment,
-            displayStatus: sharePointCount > 0 ? 'Uploaded' : 'Ready to Ship',
-          };
+        if (pendingCount > 0) {
+          return { shipment, displayStatus: 'Offline' };
         }
 
-        return { shipment, displayStatus: 'Offline' };
+        const sharePointCount = shipment.sharePointLinks?.length ?? 0;
+        return {
+          shipment,
+          displayStatus: sharePointCount > 0 ? 'Uploaded' : 'Ready to Ship',
+        };
       }),
     [filteredShipments, pendingUploadEntries],
   );
@@ -263,17 +259,22 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       <ShipmentCard
         shipment={item.shipment}
         displayStatus={item.displayStatus}
-        onPress={() =>
-          // Prevent navigation while a sync/refresh is in progress
-          !(isLoading || isSyncing) &&
-          navigation.navigate('DeliveryShippingDetails', {
-            shipmentId: item.shipment.id,
-            bolNumber: item.shipment.bolNumber,
-          })
-        }
+        onPress={() => {
+          if (isLoading || isSyncing) {
+            return;
+          }
+          const selectedBol = shipmentBols.find(
+            b => b.bol === item.shipment.bolNumber,
+          );
+          if (selectedBol) {
+            navigation.navigate('DeliveryShippingDetails', {
+              shipmentBol: selectedBol,
+            });
+          }
+        }}
       />
     ),
-    [navigation, isLoading, isSyncing],
+    [navigation, isLoading, isSyncing, shipmentBols],
   );
 
   const keyExtractor = useCallback(

@@ -8,7 +8,6 @@ import CustomButton from '../components/CustomButton';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
-import { useShipmentStore } from '../store/shipmentStore';
 import type {
   DeliveryShippingDetailsNavigationProp,
   DeliveryShippingDetailsRouteProp,
@@ -22,21 +21,7 @@ interface ShipmentItem {
   id: string;
   type: ItemType;
   name: string;
-  location: string;
 }
-
-// ─── Mock Data (replace with API data later) ─────────────────────────────────
-
-const MOCK_CUSTOMER_NAME = 'john';
-const MOCK_CUSTOMER_ADDRESS = '2450 Market Street, San Francisco';
-
-const MOCK_ITEMS: ShipmentItem[] = [
-  { id: '1', type: 'Panel', name: 'Panel 123445575768P1', location: 'P1' },
-  { id: '2', type: 'Panel', name: 'Panel 123445575768P2', location: 'P2' },
-  { id: '3', type: 'Panel', name: 'Panel 123445575768P3', location: 'P3' },
-  { id: '4', type: 'TrimBox', name: 'Trim Box 1', location: 'P4' },
-  { id: '5', type: 'TrimBox', name: 'Trim Box 2', location: 'P5' },
-];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -73,21 +58,32 @@ const DeliveryShippingDetailsScreen: React.FC<{
   navigation: DeliveryShippingDetailsNavigationProp;
   route: DeliveryShippingDetailsRouteProp;
 }> = ({ navigation, route }) => {
-  const { shipmentId, bolNumber } = route.params;
+  const { shipmentBol } = route.params;
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
 
-  const shipments = useShipmentStore(state => state.shipments);
-  const shipment = useMemo(
-    () => shipments.find(s => s.id === shipmentId),
-    [shipments, shipmentId],
+  const items = useMemo<ShipmentItem[]>(
+    () => [
+      ...shipmentBol.panels.map(panel => ({
+        id: panel,
+        type: 'Panel' as ItemType,
+        name: `Panel ${panel}`,
+      })),
+      ...shipmentBol.trimBoxes.map(box => ({
+        id: String(box),
+        type: 'TrimBox' as ItemType,
+        name: `Trim Box ${box}`,
+      })),
+    ],
+    [shipmentBol],
   );
 
-  const items = useMemo(() => MOCK_ITEMS, []);
-
   const handleUploadImages = useCallback(() => {
-    navigation.navigate('UploadImage', { shipmentId, bolNumber });
-  }, [navigation, shipmentId, bolNumber]);
+    navigation.navigate('UploadImage', {
+      shipmentId: shipmentBol.bol,
+      bolNumber: shipmentBol.bol,
+    });
+  }, [navigation, shipmentBol.bol]);
 
   return (
     <View style={styles.root}>
@@ -105,12 +101,18 @@ const DeliveryShippingDetailsScreen: React.FC<{
         showsVerticalScrollIndicator={false}
       >
         {/* ── Info fields ── */}
-        <InfoField label="Customer Name" value={MOCK_CUSTOMER_NAME} />
-        <InfoField label="Customer Address" value={MOCK_CUSTOMER_ADDRESS} />
-        <InfoField label="BOL Number" value={bolNumber} />
+        <InfoField
+          label="Customer Name"
+          value={shipmentBol.details.customer}
+        />
+        <InfoField
+          label="Customer Address"
+          value={shipmentBol.details.shipToAddress}
+        />
+        <InfoField label="BOL Number" value={shipmentBol.bol} />
         <InfoField
           label="Order Number"
-          value={shipment?.salesOrderNo ?? '—'}
+          value={shipmentBol.details.orderNumber}
         />
 
         {/* ── Item List card ── */}
@@ -138,31 +140,31 @@ const DeliveryShippingDetailsScreen: React.FC<{
 
           <View style={styles.itemListDivider} />
 
-           {/* Rows */}
-                    {items.map((item, index) => (
-                      <React.Fragment key={item.id}>
-                        <View style={styles.itemRow}>
-                          <Ionicons
-                            name={getItemIconName(item.type) as any}
-                            size={wp(8)}
-                            color={COLORS.primary}
-                            style={styles.itemIcon}
-                          />
-          
-                          <CustomText
-                            size={FontSize.normalLargeText}
-                            color={COLORS.black}
-                            weight="medium"
-                          >
-                            {item.name}
-                          </CustomText>
-                        </View>
-          
-                        {index < items.length - 1 && (
-                          <View style={styles.itemRowDivider} />
-                        )}
-                      </React.Fragment>
-                    ))}
+          {/* Rows */}
+          {items.map((item, index) => (
+            <React.Fragment key={item.id}>
+              <View style={styles.itemRow}>
+                <Ionicons
+                  name={getItemIconName(item.type) as any}
+                  size={wp(8)}
+                  color={COLORS.primary}
+                  style={styles.itemIcon}
+                />
+
+                <CustomText
+                  size={FontSize.normalLargeText}
+                  color={COLORS.black}
+                  weight="medium"
+                >
+                  {item.name}
+                </CustomText>
+              </View>
+
+              {index < items.length - 1 && (
+                <View style={styles.itemRowDivider} />
+              )}
+            </React.Fragment>
+          ))}
         </View>
       </ScrollView>
 

@@ -15,6 +15,7 @@ import { API_ROUTES } from '../services/ApiRoutes';
 import type {
   ScanTypeNavigationProp,
   ScanTypeRouteProp,
+  ScanCompletedResult,
 } from '../navigation/types';
 import CustomButton from '../components/CustomButton';
 
@@ -40,7 +41,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { entityType, csv, orderNumber, panelCurrentStatus, trimBoxStatuses } = route.params;
+  const { entityType, csv, orderNumber, panelCurrentStatus, panelLastScanType, trimBoxStatuses, onScanComplete } = route.params;
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
   const { isConnected } = useNetworkStatus();
@@ -172,6 +173,28 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
       }
     }
 
+    // Shipped validation — must run after QA Hold checks
+    if (entityType === 'Panel' && panelLastScanType === 'Ship') {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'This item has already been shipped and cannot be scanned with the selected scan type.',
+      });
+      return;
+    }
+
+    if (entityType === 'Trim Box') {
+      const matchedBox = trimBoxStatuses.find(b => b.boxNumber === Number(boxNumber));
+      if (matchedBox?.status === 'Shipped') {
+        Toast.show({
+          type: 'error',
+          text1: 'Validation Error',
+          text2: 'This item has already been shipped and cannot be scanned with the selected scan type.',
+        });
+        return;
+      }
+    }
+
     if (!isConnected) {
       Toast.show({ type: 'error', text1: 'No Internet', text2: 'Please check your internet connection.' });
       return;
@@ -198,6 +221,16 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
       console.log('[ScanTypeScreen] Submit response:', { status: res.status, json });
 
       if (json.success) {
+        const result: ScanCompletedResult = {
+          entityType,
+          csv,
+          orderNumber,
+          boxNumber,
+          scanType,
+          location: (scanType === 'Load' || scanType === 'Move' || scanType === 'Release Hold') ? location : '',
+          holdLocation: scanType === 'QA Hold' ? holdLocation : '',
+        };
+        onScanComplete?.(result);
         Toast.show({ type: 'success', text1: 'Success', text2: json.message || 'Scan submitted successfully.' });
         navigation.goBack();
       } else {
@@ -208,7 +241,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, entityType, csv, orderNumber, panelCurrentStatus, trimBoxStatuses, boxNumber, scanType, location, bol, holdLocation, holdReason, holdNotes, isConnected, navigation]);
+  }, [submitting, entityType, csv, orderNumber, panelCurrentStatus, panelLastScanType, trimBoxStatuses, boxNumber, scanType, location, bol, holdLocation, holdReason, holdNotes, isConnected, navigation, onScanComplete]);
 
   const renderDynamicFields = () => {
     if (scanType === 'Ship') {

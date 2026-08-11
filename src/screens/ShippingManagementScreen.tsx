@@ -23,7 +23,7 @@ import { toDigitsOnly } from '../utils/input';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { apiClient } from '../services/apiClient';
 import { API_ROUTES } from '../services/ApiRoutes';
-import type { ShippingManagementNavigationProp } from '../navigation/types';
+import type { ShippingManagementNavigationProp, ScanCompletedResult } from '../navigation/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -47,6 +47,7 @@ interface TrimBox {
   status: string;
   currentLocation: string;
   holdLocation: string;
+  lastScanType?: string;
 }
 
 type TrimBoxStatus = 'active' | 'partial-hold' | 'not-found' | 'error' | null;
@@ -103,6 +104,10 @@ const ShippingManagementScreen: React.FC<{
   const [trimBoxMessage, setTrimBoxMessage] = useState('');
   const [trimBoxLoading, setTrimBoxLoading] = useState(false);
 
+  // Prevents the focus listener from re-fetching immediately after returning
+  // from ScanTypeScreen (the screen updates state via the onScanComplete callback instead).
+  const skipNextFocusRefetchRef = useRef(false);
+
   useEffect(() => {
     setCsvNumber('');
     setOrderNumber('');
@@ -118,6 +123,10 @@ const ShippingManagementScreen: React.FC<{
   const onFocusRef = useRef<() => void>(() => {});
   useEffect(() => {
     onFocusRef.current = () => {
+      if (skipNextFocusRefetchRef.current) {
+        skipNextFocusRefetchRef.current = false;
+        return;
+      }
       if (entryType === 'Panel' && csvNumber.trim()) {
         fetchPanelStatus(csvNumber);
       } else if (entryType === 'Trim Box' && orderNumber.trim()) {
@@ -243,6 +252,91 @@ const ShippingManagementScreen: React.FC<{
   );
 
   const handleBarcodePress = openScanner;
+
+  // Applies a successful scan result directly to local state, avoiding a redundant API call.
+  const applyScanResult = useCallback(
+    (result: ScanCompletedResult) => {
+      if (result.entityType === 'Panel') {
+        setPanelData(prev => {
+          if (!prev) return prev;
+          const updated: PanelData = {
+            ...prev,
+            lastScanType: result.scanType,
+            lastScanTime: new Date().toISOString(),
+          };
+          if (result.scanType === 'QA Hold') {
+            updated.status = 'QA Hold';
+            updated.holdLocation = result.holdLocation;
+          } 
+           else if (result.scanType === 'Load') {
+            updated.status = 'Loaded';
+            updated.currentLocation = result.location;
+            updated.holdLocation = '';
+          } 
+          else if (result.scanType === 'Move') {
+            updated.status = 'Active';
+            updated.currentLocation = result.location;
+            updated.holdLocation = '';
+          } else if (result.scanType === 'Ship') {
+            updated.status = 'Shipped';
+          } else if (result.scanType === 'Release Hold') {
+            updated.status = 'Active';
+            updated.currentLocation = result.location;
+            updated.holdLocation = '';
+          }
+          return updated;
+        });
+        setPanelStatus(result.scanType === 'QA Hold' ? 'hold' : 'active');
+      } else {
+        const boxNum = Number(result.boxNumber);
+        const updatedList = trimBoxList.map(b => {
+          if (b.boxNumber !== boxNum) return b;
+          const u: TrimBox = { ...b, lastScanType: result.scanType };
+          if (result.scanType === 'QA Hold') {
+            u.status = 'QA Hold';
+            u.holdLocation = result.holdLocation;
+          } 
+          else if (result.scanType === 'Load') {
+            u.status = 'Loaded';
+            u.currentLocation = result.location;
+            u.holdLocation = '';
+          }
+          else if (result.scanType === 'Move') {
+            u.status = 'Active';
+            u.currentLocation = result.location;
+            u.holdLocation = '';
+          } else if (result.scanType === 'Ship') {
+            u.status = 'Shipped';
+          } else if (result.scanType === 'Release Hold') {
+            u.status = 'Active';
+            u.currentLocation = result.location;
+            u.holdLocation = '';
+          }
+          return u;
+        });
+        setTrimBoxList(updatedList);
+        const hasHold = updatedList.some(b => b.status === 'QA Hold');
+        setTrimBoxStatus(hasHold ? 'partial-hold' : 'active');
+      }
+    },
+    [trimBoxList],
+  );
+
+  const handleScanTypePress = useCallback(() => {
+    skipNextFocusRefetchRef.current = true;
+    navigation.navigate('ScanType', {
+      entityType: entryType as 'Panel' | 'Trim Box',
+      csv: entryType === 'Panel' ? csvNumber : '',
+      orderNumber: entryType === 'Trim Box' ? orderNumber : '',
+      panelCurrentStatus: panelData?.status ?? '',
+      panelLastScanType: panelData?.lastScanType ?? '',
+      trimBoxStatuses: trimBoxList.map(b => ({
+        boxNumber: b.boxNumber,
+        status: b.status,
+      })),
+      onScanComplete: applyScanResult,
+    });
+  }, [navigation, entryType, csvNumber, orderNumber, panelData, trimBoxList, applyScanResult]);
 
   // ─── Trim Box status card ─────────────────────────────────────────────────
 
@@ -603,18 +697,7 @@ const ShippingManagementScreen: React.FC<{
         <TouchableOpacity
           activeOpacity={0.8}
           style={[styles.actionButton, styles.leftButton]}
-          onPress={() =>
-            navigation.navigate('ScanType', {
-              entityType: entryType as 'Panel' | 'Trim Box',
-              csv: entryType === 'Panel' ? csvNumber : '',
-              orderNumber: entryType === 'Trim Box' ? orderNumber : '',
-              panelCurrentStatus: panelData?.status ?? '',
-              trimBoxStatuses: trimBoxList.map(b => ({
-                boxNumber: b.boxNumber,
-                status: b.status,
-              })),
-            })
-          }
+          onPress={handleScanTypePress}
         >
           <CustomText
             size={FontSize.normalText}

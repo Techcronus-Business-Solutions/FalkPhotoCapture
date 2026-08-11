@@ -1,5 +1,16 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
+import type { ShipmentBOL } from '../types/shipment';
+
+export interface ScanCompletedResult {
+  entityType: 'Panel' | 'Trim Box';
+  csv: string;
+  orderNumber: string;
+  boxNumber: string;
+  scanType: string;
+  location: string;
+  holdLocation: string;
+}
 
 export interface PanelLocationItem {
   csv: string;
@@ -18,8 +29,7 @@ export type RootStackParamList = {
   ShippingManagement: undefined;
 
   DeliveryShippingDetails: {
-    shipmentId: string;
-    bolNumber: string;
+    shipmentBol: ShipmentBOL;
   };
   ShippingDetails: {
     entityType?: 'Panel' | 'Trim Box';
@@ -34,7 +44,9 @@ export type RootStackParamList = {
     csv: string;
     orderNumber: string;
     panelCurrentStatus: string;
-    trimBoxStatuses: { boxNumber: number; status: string }[];
+    panelLastScanType: string;
+    trimBoxStatuses: { boxNumber: number; status: string; lastScanType?: string }[];
+    onScanComplete?: (result: ScanCompletedResult) => void;
   };
   OrderFulfillment: { orderNumber: string };
   PanelLocation: {

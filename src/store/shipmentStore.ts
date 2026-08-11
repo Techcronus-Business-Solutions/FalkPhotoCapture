@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import type { Shipment, ShipmentStatus } from '../types/shipment';
-import { shipmentService } from '../services/shipmentService';
+import type { Shipment, ShipmentBOL, ShipmentStatus } from '../types/shipment';
+import { shipmentService, mapBolToShipment } from '../services/shipmentService';
 import { storage } from '../utils/storage';
 
 interface ShipmentState {
   shipments: Shipment[];
+  shipmentBols: ShipmentBOL[];
   filteredShipments: Shipment[];
   searchQuery: string;
   isLoading: boolean;
@@ -22,6 +23,7 @@ interface ShipmentState {
 
 export const useShipmentStore = create<ShipmentState>((set, get) => ({
   shipments: [],
+  shipmentBols: [],
   filteredShipments: [],
   searchQuery: '',
   isLoading: false,
@@ -29,12 +31,12 @@ export const useShipmentStore = create<ShipmentState>((set, get) => ({
   syncShipments: async () => {
     set({ isLoading: true });
     try {
-      const shipments = await shipmentService.fetchShipments();
-      set({ shipments, filteredShipments: shipments, isLoading: false });
+      const shipmentBols = await shipmentService.fetchShipmentBols();
+      const shipments = shipmentBols.map(mapBolToShipment);
+      set({ shipmentBols, shipments, filteredShipments: shipments, isLoading: false });
       get().searchShipments(get().searchQuery);
       await get().persistShipments();
 
-      // If API returns empty shipments, clear old offline cache to avoid stale data
       if (shipments.length === 0) {
         await storage.removeItem(storage.KEYS.SHIPMENTS);
       }
@@ -86,20 +88,22 @@ export const useShipmentStore = create<ShipmentState>((set, get) => ({
   },
 
   persistShipments: async () => {
-    const { shipments, searchQuery } = get();
-    await storage.setItem(storage.KEYS.SHIPMENTS, { shipments, searchQuery });
+    const { shipments, searchQuery, shipmentBols } = get();
+    await storage.setItem(storage.KEYS.SHIPMENTS, { shipments, searchQuery, shipmentBols });
   },
 
   loadShipments: async () => {
     const data = await storage.getItem<{
       shipments: Shipment[];
       searchQuery: string;
+      shipmentBols?: ShipmentBOL[];
     }>(storage.KEYS.SHIPMENTS);
     if (data) {
       set({
         shipments: data.shipments,
         filteredShipments: data.shipments,
         searchQuery: data.searchQuery,
+        shipmentBols: data.shipmentBols ?? [],
       });
       get().searchShipments(data.searchQuery);
     }
