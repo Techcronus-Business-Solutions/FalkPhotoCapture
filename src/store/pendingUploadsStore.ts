@@ -4,6 +4,7 @@ import { storage } from '../utils/storage';
 export interface PendingUpload {
   id: string;
   shipmentNumber: string;
+  orderNumber: string;
   fileName: string;
   uri: string;
   base64Image?: string;
@@ -14,6 +15,7 @@ interface PendingUploadsState {
   pendingUploads: PendingUpload[];
   addPendingUpload: (uploads: PendingUpload[]) => Promise<void>;
   removePendingUpload: (id: string) => Promise<void>;
+  removePendingUploads: (ids: string[]) => Promise<void>;
   getPendingUploadsByShipment: (shipmentNumber: string) => PendingUpload[];
   getAllPendingUploads: () => PendingUpload[];
   markUploadsAsCompleted: (ids: string[]) => Promise<void>;
@@ -36,6 +38,14 @@ export const usePendingUploadsStore = create<PendingUploadsState>(
     removePendingUpload: async (id: string) => {
       set(state => ({
         pendingUploads: state.pendingUploads.filter(u => u.id !== id),
+      }));
+      await get().persistPendingUploads();
+    },
+
+    removePendingUploads: async (ids: string[]) => {
+      const idSet = new Set(ids);
+      set(state => ({
+        pendingUploads: state.pendingUploads.filter(u => !idSet.has(u.id)),
       }));
       await get().persistPendingUploads();
     },

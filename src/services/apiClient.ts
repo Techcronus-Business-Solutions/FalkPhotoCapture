@@ -41,4 +41,14 @@ export const apiClient = {
     });
     return intercept401(response);
   },
+
+  postMultipart: async (url: string, formData: FormData): Promise<Response> => {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { ...authHeaders },
+      body: formData,
+    });
+    return intercept401(response);
+  },
 };

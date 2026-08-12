@@ -15,4 +15,5 @@ export const API_ROUTES = {
   FULL_ORDER_DETAILS: `${BASE_URL}/Order/GetFullOrderDetails`,
   SCAN_SHIPMENT: `${BASE_URL}/Shipment/scan`,
   SHIPMENT_BOLS: `${BASE_URL}/Shipment/shipment-bols`,
+  UPLOAD_IMAGES: `${BASE_URL}/Shipment/upload-images`,
 } as const;

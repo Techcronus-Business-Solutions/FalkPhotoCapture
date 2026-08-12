@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { storage } from '../utils/storage';
+import { usePendingUploadsStore } from './pendingUploadsStore';
+import { useShipmentStore } from './shipmentStore';
 
 export interface AuthUser {
   token: string;
@@ -38,6 +40,8 @@ export const useAuthStore = create<AuthState>(set => ({
 
   logout: async () => {
     await storage.removeItem(storage.KEYS.AUTH_USER);
+    await usePendingUploadsStore.getState().clearAll();
+    await useShipmentStore.getState().clearAll();
     await storage.removeItem(storage.KEYS.SHIPMENTS);
     set({ user: null, isLoggedIn: false });
   },

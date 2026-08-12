@@ -5,6 +5,7 @@ const KEYS = {
   PHOTOS: '@falk/photos',
   SHIPMENTS: '@falk/shipments',
   PENDING_UPLOADS: '@falk/pending_uploads',
+  BOL_SEQUENCES: '@falk/bol_sequences',
 } as const;
 
 export const storage = {

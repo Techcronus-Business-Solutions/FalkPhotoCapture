@@ -33,6 +33,7 @@ import { uploadService } from '../services/uploadService';
 import { API_BASE_HOST } from '../services/ApiRoutes';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { usePendingUploadsStore } from '../store/pendingUploadsStore';
+import { assignBolFileNames } from '../utils/bolSequence';
 import type {
   UploadImageNavigationProp,
   UploadImageRouteProp,
@@ -64,7 +65,7 @@ const UploadImageScreen: React.FC<{
     () => photosByShipment[shipmentId] ?? EMPTY_PHOTOS,
     [photosByShipment, shipmentId],
   );
-  const { updateShipmentStatus, persistShipments, shipments } =
+  const { updateShipmentStatus, persistShipments, shipments, mergeBolImages } =
     useShipmentStore();
   const shipment = useMemo(
     () => shipments.find(item => item.id === shipmentId),
@@ -147,6 +148,24 @@ const UploadImageScreen: React.FC<{
     };
   }, [clearPhotos, shipmentId]);
 
+  const applyBolFileNames = useCallback(
+    async (newPhotos: PhotoItem[]): Promise<PhotoItem[]> => {
+      const existingFileNames = [
+        ...serverPhotos.map(p => p.fileName ?? ''),
+        ...pendingUploads.map(u => u.fileName),
+        ...photos.map(p => p.fileName ?? ''),
+      ];
+      const { renamedPhotos, persist } = await assignBolFileNames(
+        bolNumber,
+        newPhotos,
+        existingFileNames,
+      );
+      await persist();
+      return renamedPhotos;
+    },
+    [bolNumber, serverPhotos, pendingUploads, photos],
+  );
+
   const handleAddPhoto = useCallback(
     async (source: 'camera' | 'gallery') => {
       if (displayedPhotos.length >= MAX_PHOTOS) {
@@ -162,14 +181,16 @@ const UploadImageScreen: React.FC<{
         if (source === 'camera') {
           const photo = await takePhoto();
           if (photo) {
-            await addPhoto(shipmentId, photo);
+            const [renamed] = await applyBolFileNames([photo]);
+            await addPhoto(shipmentId, renamed);
           }
         } else {
           const selectedPhotos = await pickFromGallery(
             MAX_PHOTOS - displayedPhotos.length,
           );
           if (selectedPhotos?.length) {
-            await addPhotos(shipmentId, selectedPhotos);
+            const renamed = await applyBolFileNames(selectedPhotos);
+            await addPhotos(shipmentId, renamed);
           }
         }
       } finally {
@@ -183,6 +204,7 @@ const UploadImageScreen: React.FC<{
       addPhoto,
       addPhotos,
       shipmentId,
+      applyBolFileNames,
     ],
   );
 
@@ -218,37 +240,73 @@ const UploadImageScreen: React.FC<{
       return;
     }
 
+    if (!photos.length) {
+      Toast.show({
+        type: 'info',
+        text1: 'Offline Mode',
+        text2: 'Images are already saved locally and will appear on reopen.',
+      });
+      return;
+    }
+
+    const orderNumber = shipment?.salesOrderNo ?? '';
+
+    const saveOffline = async () => {
+      await uploadService.uploadPhotosOffline(
+        shipmentId,
+        bolNumber,
+        orderNumber,
+        photos,
+      );
+      updateShipmentStatus(shipmentId, 'Offline');
+      await persistShipments();
+      await clearPhotos(shipmentId);
+    };
+
     try {
       uploadingRef.current = true;
       setUploading(true);
 
-      if (!photos.length) {
+      if (isConnected) {
+        const newImages = await uploadService.uploadPhotosOnline(
+          bolNumber,
+          orderNumber,
+          photos,
+        );
+        await mergeBolImages(bolNumber, newImages);
+        await clearPhotos(shipmentId);
+        Toast.show({
+          type: 'success',
+          text1: 'Upload Successful',
+          text2: `${newImages.length} image(s) uploaded successfully.`,
+        });
+        navigation.pop(2);
+      } else {
+        await saveOffline();
         Toast.show({
           type: 'info',
           text1: 'Offline Mode',
-          text2: 'Images are already saved locally and will appear on reopen.',
+          text2:
+            'Images saved locally. They will appear when this record is reopened.',
         });
-        return;
+        navigation.pop(2);
       }
-
-      await uploadService.uploadPhotosOffline(shipmentId, bolNumber, photos);
-      updateShipmentStatus(shipmentId, 'Offline');
-      await persistShipments();
-      await clearPhotos(shipmentId);
-      Toast.show({
-        type: 'info',
-        text1: 'Offline Mode',
-        text2:
-          'Images saved locally. They will appear when this record is reopened.',
-      });
-      navigation.pop(2);
     } catch (err: unknown) {
-      updateShipmentStatus(shipmentId, 'Offline');
-      Toast.show({
-        type: 'error',
-        text1: 'Upload Error',
-        text2: err instanceof Error ? err.message : 'Please try again.',
-      });
+      try {
+        await saveOffline();
+        Toast.show({
+          type: 'error',
+          text1: 'Upload Error',
+          text2: 'Images saved locally for retry via Sync Now.',
+        });
+        navigation.pop(2);
+      } catch {
+        Toast.show({
+          type: 'error',
+          text1: 'Upload Error',
+          text2: err instanceof Error ? err.message : 'Please try again.',
+        });
+      }
     } finally {
       uploadingRef.current = false;
       setUploading(false);
@@ -256,12 +314,15 @@ const UploadImageScreen: React.FC<{
   }, [
     photos,
     pendingUploads,
+    shipment,
     shipmentId,
     bolNumber,
+    isConnected,
+    mergeBolImages,
     updateShipmentStatus,
     persistShipments,
-    navigation,
     clearPhotos,
+    navigation,
   ]);
 
   const renderPhoto = useCallback(
