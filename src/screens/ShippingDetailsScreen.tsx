@@ -216,12 +216,9 @@ const renderHeaderStatus = () => {
   const renderContent = () => {
     if (loading) {
       return (
-        <>
-          {renderHeaderStatus()}
-          <View style={styles.loaderWrapper}>
-            <Loader visible />
-          </View>
-        </>
+        <View style={styles.loaderWrapper}>
+          <Loader visible />
+        </View>
       );
     }
 

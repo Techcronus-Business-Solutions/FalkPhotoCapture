@@ -294,6 +294,8 @@ const ShippingManagementScreen: React.FC<{
             updated.holdLocation = '';
           } else if (result.scanType === 'Ship') {
             updated.status = 'Shipped';
+            updated.currentLocation = '';
+            updated.holdLocation = '';
           } else if (result.scanType === 'Release Hold') {
             updated.status = 'Active';
             updated.currentLocation = result.location;
@@ -320,6 +322,8 @@ const ShippingManagementScreen: React.FC<{
             u.holdLocation = '';
           } else if (result.scanType === 'Ship') {
             u.status = 'Shipped';
+            u.currentLocation = '';
+            u.holdLocation = '';
           } else if (result.scanType === 'Release Hold') {
             u.status = 'Active';
             u.currentLocation = result.location;

@@ -33,6 +33,7 @@ export interface ShipmentBOL {
   bol: string;
   csv: string;
   createdDate: string;
+  modified:String;
   details: ShipmentBOLDetails;
   panels: string[];
   trimBoxes: number[];

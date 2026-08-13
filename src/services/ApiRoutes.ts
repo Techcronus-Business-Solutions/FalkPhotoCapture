@@ -1,5 +1,8 @@
-const BASE_URL = 'http://192.168.1.162:8080/api';
-export const API_BASE_HOST = 'http://192.168.1.162:8080';
+// const BASE_URL = 'http://192.168.1.162:8080/api';
+// export const API_BASE_HOST = 'http://192.168.1.162:8080';
+
+const BASE_URL = 'http://tbs01.westus.cloudapp.azure.com:91/api';
+export const API_BASE_HOST = 'http://tbs01.westus.cloudapp.azure.com:91';
 
 export const API_ROUTES = {
   LOGIN: `${BASE_URL}/Login`,

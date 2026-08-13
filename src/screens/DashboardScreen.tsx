@@ -98,16 +98,22 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         return;
       }
 
-      console.log('BarcodeScanner scanned value:', codeStringValue);
-      Toast.show({
-        type: 'info',
-        text1: 'BarcodeScanner scanned value',
-        text2: codeStringValue,
-      });
+      const matchedBol = shipmentBols.find(b => b.bol === codeStringValue);
 
-      setTimeout(closeScanner, 800);
+      if (matchedBol) {
+        closeScanner();
+        navigation.navigate('DeliveryShippingDetails', {
+          shipmentBol: matchedBol,
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'BOL Not Found',
+          text2: `No shipment found for BOL: ${codeStringValue}`,
+        });
+      }
     },
-    [closeScanner],
+    [closeScanner, navigation, shipmentBols],
   );
 
   const handleSync = useCallback(async () => {
@@ -336,7 +342,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       )}
       <View style={styles.searchContainer}>
         <CustomInput
-          placeholder="Search by BoL / Shipment No..."
+          placeholder="Search by BoL"
           value={searchQuery}
           onChangeText={searchShipments}
           editable={!isLoading && !isSyncing}

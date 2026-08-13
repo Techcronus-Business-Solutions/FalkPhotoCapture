@@ -41,7 +41,7 @@ export const mapBolToShipment = (bol: ShipmentBOL): Shipment => {
   return {
     id: bol.bol,
     bolNumber: bol.bol,
-    date: formatShipmentDate(bol.createdDate),
+    date: formatShipmentDate(bol.modified),
     status,
     photoCount: sharePointLinks.length,
     sharePointLinks,

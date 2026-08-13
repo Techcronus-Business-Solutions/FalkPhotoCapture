@@ -21,6 +21,9 @@ export const authService = {
       throw new Error('Username and password are required.');
     }
 
+    console.log(`[API] POST ${API_ROUTES.LOGIN}`);
+    console.log('[API] Request Body:', JSON.stringify({ userName: username, password: '***' }, null, 2));
+
     const response = await fetch(API_ROUTES.LOGIN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -28,6 +31,7 @@ export const authService = {
     });
 
     const responseText = await response.text();
+    console.log(`[API] Response [${response.status}]:`, responseText);
 
     if (!response.ok) {
       let errorMessage = `Login failed with status ${response.status}`;
