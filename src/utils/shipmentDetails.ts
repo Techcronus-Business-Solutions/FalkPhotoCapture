@@ -6,7 +6,7 @@ export interface ShipmentDetailsRequestConfig {
 
 export const normalizeCsvIdentifier = (csv: string): string => {
   if (!csv) return '';
-  return csv.replace(/P\d+$/, '').trim();
+  return csv.replace(/P\d+$/i, '').trim();
 };
 
 export const getShipmentDetailsRequestConfig = (

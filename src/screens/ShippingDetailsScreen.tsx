@@ -11,6 +11,7 @@ import useBackHandler from '../hooks/useBackHandler';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { apiClient } from '../services/apiClient';
 import { getShipmentDetailsRequestConfig } from '../utils/shipmentDetails';
+import { displayValue } from '../utils/input';
 import type {
   ShippingDetailsNavigationProp,
   ShippingDetailsRouteProp,
@@ -113,7 +114,9 @@ const ShippingDetailsScreen: React.FC<ShippingDetailsScreenProps> = ({
 
   const buildPanelDisplay = useCallback(
     (value1 = '', value2 = '', value3 = '') => {
-      return [value1, value2, value3].filter(Boolean).join(' ');
+      return [value1, value2, value3]
+        .filter(value => value !== null && value !== undefined && value !== '')
+        .join(' ');
     },
     [],
   );
@@ -185,33 +188,33 @@ const ShippingDetailsScreen: React.FC<ShippingDetailsScreenProps> = ({
     fetchShipmentDetails();
   }, [entityType, identifier, isConnected, resetState]);
 
-const renderHeaderStatus = () => {
-  const paymentStatus = shipmentData?.paymentStatus?.trim();
+  const renderHeaderStatus = () => {
+    const paymentStatus = shipmentData?.paymentStatus?.trim();
 
-  const isApiError = statusColor === COLORS.failed;
-  const isApproved = paymentStatus === 'Approved';
+    const isApiError = statusColor === COLORS.failed;
+    const isApproved = paymentStatus === 'Approved';
 
-  return (
-    <View
-      style={[
-        styles.approvalBadge,
-        (!isApproved || isApiError) && styles.failedBadge,
-      ]}
-    >
-      <CustomText
-        size={FontSize.normalText}
-        color={COLORS.white}
-        weight="semibold"
+    return (
+      <View
+        style={[
+          styles.approvalBadge,
+          (!isApproved || isApiError) && styles.failedBadge,
+        ]}
       >
-        {paymentStatus
-          ? `Shipment Prepayment : ${paymentStatus}`
-          : isApiError
+        <CustomText
+          size={FontSize.normalText}
+          color={COLORS.white}
+          weight="semibold"
+        >
+          {paymentStatus
+            ? `Shipment Prepayment : ${paymentStatus}`
+            : isApiError
             ? apiMessage || 'Unable to load shipment details.'
             : 'Shipment Prepayment : Pending'}
-      </CustomText>
-    </View>
-  );
-};
+        </CustomText>
+      </View>
+    );
+  };
 
   const renderContent = () => {
     if (loading) {
@@ -241,9 +244,12 @@ const renderHeaderStatus = () => {
         <View style={styles.infoCard}>
           <InfoRow
             label="Shipping Details for CSV:"
-            value={details?.csv || ''}
+            value={displayValue(details?.csv) as string}
           />
-          <InfoRow label="Project:" value={details?.title || ''} />
+          <InfoRow
+            label="Project:"
+            value={displayValue(details?.title) as string}
+          />
 
           <View style={styles.twoColRow}>
             <View style={styles.twoColItem}>
@@ -259,7 +265,7 @@ const renderHeaderStatus = () => {
                 color={COLORS.black}
                 weight="semibold"
               >
-                {details?.orderNumber || ''}
+                {displayValue(details?.orderNumber) as string}
               </CustomText>
             </View>
             <View style={styles.twoColItem}>
@@ -275,13 +281,19 @@ const renderHeaderStatus = () => {
                 color={COLORS.black}
                 weight="semibold"
               >
-                {details?.customerType || ''}
+                {displayValue(details?.customerType) as string}
               </CustomText>
             </View>
           </View>
 
-          <InfoRow label="Customer:" value={details?.customer || ''} />
-          <InfoRow label="Ship To:" value={details?.shipToName || ''} />
+          <InfoRow
+            label="Customer:"
+            value={displayValue(details?.customer) as string}
+          />
+          <InfoRow
+            label="Ship To:"
+            value={displayValue(details?.shipToName) as string}
+          />
 
           <View style={styles.metricsRow}>
             <View style={styles.metricBox}>
@@ -297,7 +309,7 @@ const renderHeaderStatus = () => {
                 color={COLORS.black}
                 weight="bold"
               >
-                {details?.truckLoadCount ?? ''}
+                {displayValue(details?.truckLoadCount) as string | number}
               </CustomText>
             </View>
             <View style={styles.metricBox}>
@@ -313,7 +325,7 @@ const renderHeaderStatus = () => {
                 color={COLORS.black}
                 weight="bold"
               >
-                {details?.extendedLoad ? details.extendedLoad : ''}
+                {displayValue(details?.extendedLoad) as string}
               </CustomText>
             </View>
           </View>
@@ -332,17 +344,38 @@ const renderHeaderStatus = () => {
           <View style={styles.specBody}>
             <SpecRow
               label="Project Manager :"
-              value={details?.projectManager || ''}
+              value={displayValue(details?.projectManager) as string}
             />
-            <SpecRow label="Panel Type:" value={details?.panel || ''} />
-            <SpecRow label="Thickness" value={details?.thickness || ''} />
+            <SpecRow
+              label="Panel Type:"
+              value={displayValue(details?.panel) as string}
+            />
+            <SpecRow
+              label="Thickness"
+              value={displayValue(details?.thickness) as string}
+            />
             <View style={styles.specDivider} />
-            <SpecRow label="Exterior Panel:" value={exteriorPanel} />
-            <SpecRow label="Interior Panel:" value={interiorPanel} />
+            <SpecRow
+              label="Exterior Panel:"
+              value={displayValue(exteriorPanel) as string}
+            />
+            <SpecRow
+              label="Interior Panel:"
+              value={displayValue(interiorPanel) as string}
+            />
             <View style={styles.specDivider} />
-            <SpecRow label="Trims:" value={details?.trims || ''} />
-            <SpecRow label="Accessories:" value={details?.accessories || ''} />
-            <SpecRow label="Flat Sheets:" value={details?.flatSheets || ''} />
+            <SpecRow
+              label="Trims:"
+              value={displayValue(details?.trims) as string}
+            />
+            <SpecRow
+              label="Accessories:"
+              value={displayValue(details?.accessories) as string}
+            />
+            <SpecRow
+              label="Flat Sheets:"
+              value={displayValue(details?.flatSheets) as string}
+            />
           </View>
         </View>
       </>

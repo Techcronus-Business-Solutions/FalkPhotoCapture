@@ -8,6 +8,7 @@ import CustomButton from '../components/CustomButton';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
+import { displayValue } from '../utils/input';
 import type {
   DeliveryShippingDetailsNavigationProp,
   DeliveryShippingDetailsRouteProp,
@@ -104,16 +105,19 @@ const DeliveryShippingDetailsScreen: React.FC<{
         {/* ── Info fields ── */}
         <InfoField
           label="Customer Name"
-          value={shipmentBol.details.customer}
+          value={displayValue(shipmentBol.details.customer) as string}
         />
         <InfoField
           label="Customer Address"
-          value={shipmentBol.details.shipToAddress}
+          value={displayValue(shipmentBol.details.shipToAddress) as string}
         />
-        <InfoField label="BOL Number" value={shipmentBol.bol} />
+        <InfoField
+          label="BOL Number"
+          value={displayValue(shipmentBol.bol) as string}
+        />
         <InfoField
           label="Order Number"
-          value={shipmentBol.details.orderNumber}
+          value={displayValue(shipmentBol.details.orderNumber) as string}
         />
 
         {/* ── Item List card ── */}

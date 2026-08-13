@@ -19,7 +19,7 @@ import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
 import useCameraScanner from '../hooks/useCameraScanner';
-import { toDigitsOnly } from '../utils/input';
+import { displayValue, toDigitsOnly } from '../utils/input';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { apiClient } from '../services/apiClient';
 import { API_ROUTES } from '../services/ApiRoutes';
@@ -587,10 +587,10 @@ const ShippingManagementScreen: React.FC<{
                 {`Box ${box.boxNumber}`}
               </CustomText>
               <CustomText size={FontSize.normalText} color={COLORS.black}>
-                Status: {box.status}
+                Status: {displayValue(box.status) as string}
               </CustomText>
               <CustomText size={FontSize.normalText} color={COLORS.greyText}>
-                Location: {getBoxLocation(box)}
+                Location: {displayValue(getBoxLocation(box)) as string}
               </CustomText>
             </View>
           </View>
@@ -620,7 +620,7 @@ const ShippingManagementScreen: React.FC<{
             color={COLORS.black}
             weight="semibold"
           >
-            {data.status}
+            {displayValue(data.status) as string}
           </CustomText>
         </View>
       </View>
@@ -641,7 +641,7 @@ const ShippingManagementScreen: React.FC<{
             color={COLORS.black}
             weight="semibold"
           >
-            {data.lastScanType}
+            {displayValue(data.lastScanType) as string}
           </CustomText>
         </View>
       </View>
@@ -732,7 +732,7 @@ const ShippingManagementScreen: React.FC<{
                 On Hold
               </CustomText>
               <CustomText size={FontSize.smallText} color={COLORS.greyText}>
-                {`Hold location: ${panelData.holdLocation}`}
+                {`Hold location: ${displayValue(panelData.holdLocation)}`}
               </CustomText>
             </View>
           </View>
@@ -761,7 +761,7 @@ const ShippingManagementScreen: React.FC<{
                 {`Active`}
               </CustomText>
               <CustomText size={FontSize.smallText} color={COLORS.greyText}>
-                {`${loc.label}: ${loc.value}`}
+                {`${loc.label}: ${displayValue(loc.value)}`}
               </CustomText>
             </View>
           </View>

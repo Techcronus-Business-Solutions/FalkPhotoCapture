@@ -13,6 +13,7 @@ import type {
   PanelLocationItem,
 } from '../navigation/types';
 import CSV from '../assets/images/csv.svg';
+import { displayValue } from '../utils/input';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -31,7 +32,8 @@ const getPanelStatusColor = (status: string): string => {
 
 const getLocationDisplay = (item: PanelLocationItem): string => {
   if (item.status === 'Shipped') return 'Shipped';
-  if (item.status === 'QA Hold') return item.holdLocation || item.currentLocation;
+  if (item.status === 'QA Hold')
+    return item.holdLocation || item.currentLocation;
   return item.currentLocation;
 };
 
@@ -75,7 +77,7 @@ const PanelCard: React.FC<{ item: PanelLocationItem }> = ({ item }) => {
             color={statusColor}
             weight="bold"
           >
-            {item.status || '—'}
+            {displayValue(item.status) as string}
           </CustomText>
         </View>
 
@@ -95,11 +97,10 @@ const PanelCard: React.FC<{ item: PanelLocationItem }> = ({ item }) => {
             color={COLORS.black}
             weight="bold"
           >
-            {displayLocation || '—'}
+            {displayValue(displayLocation) as string}
           </CustomText>
         </View>
       </View>
-
     </View>
   );
 };

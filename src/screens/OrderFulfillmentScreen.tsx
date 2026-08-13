@@ -20,6 +20,7 @@ import type {
 import Box from '../assets/images/box.svg';
 import Shop from '../assets/images/shop.svg';
 import CSV from '../assets/images/csv.svg';
+import { displayValue } from '../utils/input';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -99,7 +100,9 @@ const getPanelLocationItemDisplay = (loc: PanelLocationItem): string => {
   return loc.currentLocation;
 };
 
-const buildPanelLocationItemSummary = (locations: PanelLocationItem[]): string => {
+const buildPanelLocationItemSummary = (
+  locations: PanelLocationItem[],
+): string => {
   if (!locations?.length) return '';
   const counts: Record<string, number> = {};
   for (const loc of locations) {
@@ -123,7 +126,9 @@ const CsvCard: React.FC<{ item: Panel; onPress: () => void }> = ({
   onPress,
 }) => {
   const stageColor = getStageColor(item.stage);
-  const panelLocationSummary = buildPanelLocationItemSummary(item.panelLocations);
+  const panelLocationSummary = buildPanelLocationItemSummary(
+    item.panelLocations,
+  );
 
   const renderGridItem = (icon: string, label: string, value: string) => (
     <View style={styles.csvGridItem}>
@@ -176,7 +181,7 @@ const CsvCard: React.FC<{ item: Panel; onPress: () => void }> = ({
             color={COLORS.white}
             weight="bold"
           >
-            {`Stage: ${item.stage}`}
+            {`Stage: ${displayValue(item.stage)}`}
           </CustomText>
         </View>
       </View>
@@ -185,10 +190,22 @@ const CsvCard: React.FC<{ item: Panel; onPress: () => void }> = ({
 
       {/* Details */}
       <View style={styles.csvGrid}>
-        {renderGridItem('location', 'Panel Locations', panelLocationSummary)}
-        {renderGridItem('location', 'Panel', item.panel)}
-        {renderGridItem('cube', 'Trim', item.trims)}
-        {renderGridItem('settings-outline', 'Accessories', item.accessories)}
+        {renderGridItem(
+          'location',
+          'Panel Locations',
+          displayValue(panelLocationSummary) as string,
+        )}
+        {renderGridItem(
+          'location',
+          'Panel',
+          displayValue(item.panel) as string,
+        )}
+        {renderGridItem('cube', 'Trim', displayValue(item.trims) as string)}
+        {renderGridItem(
+          'settings-outline',
+          'Accessories',
+          displayValue(item.accessories) as string,
+        )}
       </View>
 
       <View style={styles.csvDivider} />
@@ -209,7 +226,7 @@ const CsvCard: React.FC<{ item: Panel; onPress: () => void }> = ({
             color={COLORS.white}
             weight="bold"
           >
-            {item.shops}
+            {displayValue(item.shops) as string}
           </CustomText>
         </View>
       </View>
@@ -246,7 +263,7 @@ const TrimBoxCard: React.FC<{ item: TrimBox }> = ({ item }) => {
             color={COLORS.white}
             weight="bold"
           >
-            {item.status || 'Unknown'}
+            {displayValue(item.status) as string}
           </CustomText>
         </View>
       </View>
@@ -267,7 +284,7 @@ const TrimBoxCard: React.FC<{ item: TrimBox }> = ({ item }) => {
             color={COLORS.black}
             weight="bold"
           >
-            {location}
+            {displayValue(location) as string}
           </CustomText>
         </View>
       </View>
@@ -357,7 +374,7 @@ const OrderFulfillmentScreen: React.FC<{
       >
         {/* ── Order Summary Card ── */}
         <View style={styles.summaryCard}>
-          <View style={[styles.summaryItem,{flex: 1.5}]}>
+          <View style={[styles.summaryItem, { flex: 1.5 }]}>
             <View style={styles.summaryIconRow}>
               <View style={styles.summaryIconBg}>
                 <Ionicons

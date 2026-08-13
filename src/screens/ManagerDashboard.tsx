@@ -11,6 +11,7 @@ import { wp } from '../utils/responsive';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useAuthStore } from '../store/authStore';
 import type { ManagerDashboardNavigationProp } from '../navigation/types';
+import { displayValue } from '../utils/input';
 
 const ManagerDashboard: React.FC<{
   navigation: ManagerDashboardNavigationProp;
@@ -53,7 +54,7 @@ const ManagerDashboard: React.FC<{
             color={COLORS.primary}
             weight="semibold"
           >
-            Welcome, {user?.fullName ?? ''}
+            Welcome, {displayValue(user?.fullName) as string}
           </CustomText>
         </View>
       </View>
