@@ -1,18 +1,24 @@
 import { create } from 'zustand';
 import { storage } from '../utils/storage';
+import { usePendingUploadsStore } from './pendingUploadsStore';
+import { useShipmentStore } from './shipmentStore';
 
-interface User {
-  username: string;
+export interface AuthUser {
   token: string;
-  role: 'driver' | 'manager';
-  driverID?: string;
+
+  employeeId: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  status: string;
+  role: string;
 }
 
 interface AuthState {
-  user: User | null;
+  user: AuthUser | null;
   isLoggedIn: boolean;
   isHydrated: boolean;
-  login: (user: User) => Promise<void>;
+  login: (user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
 }
@@ -23,17 +29,20 @@ export const useAuthStore = create<AuthState>(set => ({
   isHydrated: false,
 
   hydrate: async () => {
-    const user = await storage.getItem<User>(storage.KEYS.AUTH_USER);
+    const user = await storage.getItem<AuthUser>(storage.KEYS.AUTH_USER);
     set({ user, isLoggedIn: !!user, isHydrated: true });
   },
 
-  login: async (user: User) => {
+  login: async (user: AuthUser) => {
     await storage.setItem(storage.KEYS.AUTH_USER, user);
     set({ user, isLoggedIn: true });
   },
 
   logout: async () => {
     await storage.removeItem(storage.KEYS.AUTH_USER);
+    await usePendingUploadsStore.getState().clearAll();
+    await useShipmentStore.getState().clearAll();
+    await storage.removeItem(storage.KEYS.SHIPMENTS);
     set({ user: null, isLoggedIn: false });
   },
 }));

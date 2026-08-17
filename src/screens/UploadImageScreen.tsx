@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   Modal,
 } from 'react-native';
+import useBackHandler from '../hooks/useBackHandler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -29,22 +30,24 @@ import { usePhotoStore, type PhotoItem } from '../store/photoStore';
 import { useShipmentStore } from '../store/shipmentStore';
 import { useImagePicker } from '../hooks/useImagePicker';
 import { uploadService } from '../services/uploadService';
-import { getGraphAccessToken } from '../services/AccessTokenProvider';
+import { API_BASE_HOST } from '../services/ApiRoutes';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { usePendingUploadsStore } from '../store/pendingUploadsStore';
+import { assignBolFileNames } from '../utils/bolSequence';
 import type {
-  ShipmentDetailNavigationProp,
-  ShipmentDetailRouteProp,
+  UploadImageNavigationProp,
+  UploadImageRouteProp,
 } from '../navigation/types';
 
 const MAX_PHOTOS = 20;
 const EMPTY_PHOTOS: PhotoItem[] = [];
 
-const ShipmentDetailScreen: React.FC<{
-  navigation: ShipmentDetailNavigationProp;
-  route: ShipmentDetailRouteProp;
+const UploadImageScreen: React.FC<{
+  navigation: UploadImageNavigationProp;
+  route: UploadImageRouteProp;
 }> = ({ navigation, route }) => {
-  const { shipmentId, bolNumber } = route.params;
+  const { shipmentId, bolNumber, images } = route.params;
+  const handleBack = useBackHandler(navigation);
   const [uploading, setUploading] = useState(false);
   const uploadingRef = useRef(false);
   const [selectingPhotos, setSelectingPhotos] = useState(false);
@@ -62,7 +65,8 @@ const ShipmentDetailScreen: React.FC<{
     () => photosByShipment[shipmentId] ?? EMPTY_PHOTOS,
     [photosByShipment, shipmentId],
   );
-  const { updateShipmentStatus, shipments } = useShipmentStore();
+  const { updateShipmentStatus, persistShipments, shipments, mergeBolImages } =
+    useShipmentStore();
   const shipment = useMemo(
     () => shipments.find(item => item.id === shipmentId),
     [shipments, shipmentId],
@@ -115,67 +119,26 @@ const ShipmentDetailScreen: React.FC<{
   useEffect(() => {
     let isMounted = true;
 
-    const buildServerPhotos = async () => {
-      if (!shipment?.sharePointLinks?.length) {
-        if (isMounted) {
-          setServerPhotos([]);
-        }
-        return;
-      }
-
-      if (!isConnected) {
-        if (isMounted) {
-          setServerPhotos(
-            shipment.sharePointLinks.map(link => ({
-              id: `server-${shipmentId}-${link.attachmentNo}`,
-              uri: link.url1,
-              fileName: link.fileName,
-              isServerImage: true,
-              isPlaceholder: false,
-            })) as PhotoItem[],
-          );
-        }
-        return;
-      }
-
-      try {
-        const token = await getGraphAccessToken();
-
-        if (!isMounted) {
-          return;
-        }
-
+    if (isMounted) {
+      if (!images?.length) {
+        setServerPhotos([]);
+      } else {
         setServerPhotos(
-          shipment.sharePointLinks.map(link => ({
-            id: `server-${shipmentId}-${link.attachmentNo}`,
-            uri: link.url1,
-            headers: { Authorization: `Bearer ${token}` },
-            fileName: link.fileName,
+          images.map((img, idx) => ({
+            id: `server-${shipmentId}-${idx + 1}`,
+            uri: API_BASE_HOST + img.imageUrl,
+            fileName: img.fileName,
             isServerImage: true,
             isPlaceholder: false,
           })) as PhotoItem[],
         );
-      } catch {
-        if (isMounted) {
-          setServerPhotos(
-            shipment.sharePointLinks.map(link => ({
-              id: `server-${shipmentId}-${link.attachmentNo}`,
-              uri: link.url1,
-              fileName: link.fileName,
-              isServerImage: true,
-              isPlaceholder: false,
-            })) as PhotoItem[],
-          );
-        }
       }
-    };
-
-    buildServerPhotos();
+    }
 
     return () => {
       isMounted = false;
     };
-  }, [shipment, shipmentId, isConnected]);
+  }, [images, shipmentId]);
 
   useEffect(() => {
     return () => {
@@ -184,6 +147,24 @@ const ShipmentDetailScreen: React.FC<{
       }
     };
   }, [clearPhotos, shipmentId]);
+
+  const applyBolFileNames = useCallback(
+    async (newPhotos: PhotoItem[]): Promise<PhotoItem[]> => {
+      const existingFileNames = [
+        ...serverPhotos.map(p => p.fileName ?? ''),
+        ...pendingUploads.map(u => u.fileName),
+        ...photos.map(p => p.fileName ?? ''),
+      ];
+      const { renamedPhotos, persist } = await assignBolFileNames(
+        bolNumber,
+        newPhotos,
+        existingFileNames,
+      );
+      await persist();
+      return renamedPhotos;
+    },
+    [bolNumber, serverPhotos, pendingUploads, photos],
+  );
 
   const handleAddPhoto = useCallback(
     async (source: 'camera' | 'gallery') => {
@@ -200,14 +181,16 @@ const ShipmentDetailScreen: React.FC<{
         if (source === 'camera') {
           const photo = await takePhoto();
           if (photo) {
-            await addPhoto(shipmentId, photo);
+            const [renamed] = await applyBolFileNames([photo]);
+            await addPhoto(shipmentId, renamed);
           }
         } else {
           const selectedPhotos = await pickFromGallery(
             MAX_PHOTOS - displayedPhotos.length,
           );
           if (selectedPhotos?.length) {
-            await addPhotos(shipmentId, selectedPhotos);
+            const renamed = await applyBolFileNames(selectedPhotos);
+            await addPhotos(shipmentId, renamed);
           }
         }
       } finally {
@@ -221,6 +204,7 @@ const ShipmentDetailScreen: React.FC<{
       addPhoto,
       addPhotos,
       shipmentId,
+      applyBolFileNames,
     ],
   );
 
@@ -256,36 +240,73 @@ const ShipmentDetailScreen: React.FC<{
       return;
     }
 
+    if (!photos.length) {
+      Toast.show({
+        type: 'info',
+        text1: 'Offline Mode',
+        text2: 'Images are already saved locally and will appear on reopen.',
+      });
+      return;
+    }
+
+    const orderNumber = shipment?.salesOrderNo ?? '';
+
+    const saveOffline = async () => {
+      await uploadService.uploadPhotosOffline(
+        shipmentId,
+        bolNumber,
+        orderNumber,
+        photos,
+      );
+      updateShipmentStatus(shipmentId, 'Offline');
+      await persistShipments();
+      await clearPhotos(shipmentId);
+    };
+
     try {
       uploadingRef.current = true;
       setUploading(true);
 
-      if (!photos.length) {
+      if (isConnected) {
+        const newImages = await uploadService.uploadPhotosOnline(
+          bolNumber,
+          orderNumber,
+          photos,
+        );
+        await mergeBolImages(bolNumber, newImages);
+        await clearPhotos(shipmentId);
+        Toast.show({
+          type: 'success',
+          text1: 'Upload Successful',
+          text2: `${newImages.length} image(s) uploaded successfully.`,
+        });
+        navigation.pop(2);
+      } else {
+        await saveOffline();
         Toast.show({
           type: 'info',
           text1: 'Offline Mode',
-          text2: 'Images are already saved locally and will appear on reopen.',
+          text2:
+            'Images saved locally. They will appear when this record is reopened.',
         });
-        return;
+        navigation.pop(2);
       }
-
-      await uploadService.uploadPhotosOffline(shipmentId, bolNumber, photos);
-      updateShipmentStatus(shipmentId, 'Offline');
-      await clearPhotos(shipmentId);
-      Toast.show({
-        type: 'info',
-        text1: 'Offline Mode',
-        text2:
-          'Images saved locally. They will appear when this record is reopened.',
-      });
-      navigation.goBack();
     } catch (err: unknown) {
-      updateShipmentStatus(shipmentId, 'Offline');
-      Toast.show({
-        type: 'error',
-        text1: 'Upload Error',
-        text2: err instanceof Error ? err.message : 'Please try again.',
-      });
+      try {
+        await saveOffline();
+        Toast.show({
+          type: 'error',
+          text1: 'Upload Error',
+          text2: 'Images saved locally for retry via Sync Now.',
+        });
+        navigation.pop(2);
+      } catch {
+        Toast.show({
+          type: 'error',
+          text1: 'Upload Error',
+          text2: err instanceof Error ? err.message : 'Please try again.',
+        });
+      }
     } finally {
       uploadingRef.current = false;
       setUploading(false);
@@ -293,23 +314,23 @@ const ShipmentDetailScreen: React.FC<{
   }, [
     photos,
     pendingUploads,
+    shipment,
     shipmentId,
     bolNumber,
+    isConnected,
+    mergeBolImages,
     updateShipmentStatus,
-    navigation,
+    persistShipments,
     clearPhotos,
+    navigation,
   ]);
 
   const renderPhoto = useCallback(
     ({ item }: { item: PhotoItem }) => {
       if (item.isServerImage) {
-        // Server images are read-only. If offline, pass empty uri so
-        // ImageCard shows the placeholder message 'Offline'. When online
-        // we pass the BC-provided Graph URL and token header.
         return (
           <ImageCard
             uri={isConnected ? item.uri : ''}
-            headers={isConnected ? item.headers : undefined}
             onRemove={undefined}
             showPlaceholderOnError
             placeholderMessage={isConnected ? undefined : 'Offline'}
@@ -336,7 +357,7 @@ const ShipmentDetailScreen: React.FC<{
       <View style={styles.root}>
         <Header
           title="Shipment"
-          onLeftPress={() => navigation.goBack()}
+          onLeftPress={handleBack}
           leftIconName="arrow-back"
         />
         <EmptyView
@@ -351,7 +372,7 @@ const ShipmentDetailScreen: React.FC<{
     <View style={styles.root}>
       <Header
         title="Shipment"
-        onLeftPress={() => navigation.goBack()}
+        onLeftPress={handleBack}
         leftIconName="arrow-back"
       />
 
@@ -388,7 +409,7 @@ const ShipmentDetailScreen: React.FC<{
             weight="regular"
             style={{ marginTop: wp(4) }}
           >
-            Sales Order
+            Order Number
           </CustomText>
           <View style={styles.bolContainer}>
             <CustomText
@@ -612,4 +633,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ShipmentDetailScreen;
+export default UploadImageScreen;

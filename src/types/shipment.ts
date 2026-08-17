@@ -15,3 +15,27 @@ export interface Shipment {
   sharePointLinks: ShipmentSharePointLink[];
   salesOrderNo?: string;
 }
+
+export interface ShipmentBOLImage {
+  id: string;
+  fileName: string;
+  imageUrl: string;
+}
+
+export interface ShipmentBOLDetails {
+  orderNumber: string;
+  csv: string;
+  customer: string;
+  shipToAddress: string;
+}
+
+export interface ShipmentBOL {
+  bol: string;
+  csv: string;
+  createdDate: string;
+  modified:String;
+  details: ShipmentBOLDetails;
+  panels: string[];
+  trimBoxes: number[];
+  images: ShipmentBOLImage[];
+}

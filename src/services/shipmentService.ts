@@ -1,13 +1,11 @@
-import { getAccessToken } from './AccessTokenProvider';
+import { apiClient } from './apiClient';
 import { API_ROUTES } from './ApiRoutes';
-import { useAuthStore } from '../store/authStore';
 import type {
   Shipment,
   ShipmentSharePointLink,
   ShipmentStatus,
+  ShipmentBOL,
 } from '../types/shipment';
-
-const SHIPMENTS_BASE_URL = API_ROUTES.SHIPMENTS;
 
 const formatShipmentDate = (rawDate: unknown): string => {
   const dateString =
@@ -28,108 +26,52 @@ const formatShipmentDate = (rawDate: unknown): string => {
   });
 };
 
-const mapApiShipmentToShipment = (item: any): Shipment => {
-  const sharePointLinks: ShipmentSharePointLink[] = Array.isArray(
-    item.sharePointLinks,
-  )
-    ? item.sharePointLinks.map((link: any) => ({
-        attachmentNo: Number(link.attachmentNo ?? 0),
-        url1: String(link.url1 ?? ''),
-        fileName: String(link.fileName ?? ''),
-      }))
-    : [];
+export const mapBolToShipment = (bol: ShipmentBOL): Shipment => {
+  const sharePointLinks: ShipmentSharePointLink[] = bol.images.map(
+    (img, idx) => ({
+      attachmentNo: idx + 1,
+      url1: img.imageUrl ?? '',
+      fileName: img.fileName ?? '',
+    }),
+  );
 
   const status: ShipmentStatus =
-    typeof item?.status === 'string' &&
-    ['Ready to Ship', 'Uploaded', 'Offline'].includes(item.status)
-      ? (item.status as ShipmentStatus)
-      : sharePointLinks.length > 0
-      ? 'Uploaded'
-      : 'Ready to Ship';
+    sharePointLinks.length > 0 ? 'Uploaded' : 'Ready to Ship';
 
   return {
-    id: String(item.id ?? item.no ?? ''),
-    bolNumber: String(item.no ?? ''),
-    date: formatShipmentDate(item.shipmentDate),
+    id: bol.bol,
+    bolNumber: bol.bol,
+    date: formatShipmentDate(bol.modified),
     status,
     photoCount: sharePointLinks.length,
     sharePointLinks,
-    salesOrderNo: String(item.salesOrderNo ?? ''),
+    salesOrderNo: bol.details?.orderNumber ?? '',
   };
 };
 
 export const shipmentService = {
-  fetchShipments: async (): Promise<Shipment[]> => {
-    const accessToken = await getAccessToken();
-    const driverID = useAuthStore.getState().user?.driverID;
-
-    // Build URL with query parameters
-    const url = new URL(SHIPMENTS_BASE_URL);
-    url.searchParams.append('$expand', 'sharePointLinks');
-    if (driverID) {
-      url.searchParams.append('$filter', `driver eq '${driverID}'`);
-    }
-
-    /*
-    // Original API - commented for offline demo
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
+  fetchShipmentBols: async (): Promise<ShipmentBOL[]> => {
+    const response = await apiClient.get(API_ROUTES.SHIPMENT_BOLS);
     const responseText = await response.text();
-    console.log('Shipment API Response:', responseText);
 
     if (!response.ok) {
-      const message =
-        responseText || `Shipment fetch failed with status ${response.status}`;
-      throw new Error(message);
+      throw new Error(
+        responseText ||
+          `Shipment BOL fetch failed with status ${response.status}`,
+      );
     }
 
-    let data: any;
+    let data: { success: boolean; message: string; data: ShipmentBOL[] | null };
     try {
       data = JSON.parse(responseText);
     } catch {
-      throw new Error('Unable to parse shipment response.');
+      throw new Error('Unable to parse shipment BOL response.');
     }
 
-    if (!Array.isArray(data.value)) {
+    if (!data.success || !Array.isArray(data.data)) {
       return [];
     }
 
-    return data.value.map(mapApiShipmentToShipment);
-    */
-
-    const mockShipments = [
-      {
-        id: 'SHIP-1001',
-        no: 'BOL-1001',
-        shipmentDate: '2026-07-01T00:00:00Z',
-        salesOrderNo: 'SO-1001',
-        status: 'Ready to Ship' as ShipmentStatus,
-        sharePointLinks: [],
-      },
-      {
-        id: 'SHIP-1002',
-        no: 'BOL-1002',
-        shipmentDate: '2026-07-02T00:00:00Z',
-        salesOrderNo: 'SO-1002',
-        status: 'Ready to Ship' as ShipmentStatus,
-        sharePointLinks: [],
-      },
-      {
-        id: 'SHIP-1003',
-        no: 'BOL-1003',
-        shipmentDate: '2026-07-03T00:00:00Z',
-        salesOrderNo: 'SO-1003',
-        status: 'Ready to Ship' as ShipmentStatus,
-        sharePointLinks: [],
-      },
-    ];
-
-    return mockShipments.map(mapApiShipmentToShipment);
+    return data.data;
   },
 };

@@ -13,13 +13,13 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import Ionicons from '@react-native-vector-icons/ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import Header from '../components/Header';
 import ShipmentCard from '../components/ShipmentCard';
 import CustomButton from '../components/CustomButton';
 import EmptyView from '../components/EmptyView';
+import Loader from '../components/Loader';
 import LogoutModal from '../components/LogoutModal';
 import CustomText from '../components/CustomText';
 import { COLORS, FontSize } from '../assets/constants';
@@ -32,16 +32,19 @@ import type { DashboardNavigationProp } from '../navigation/types';
 import type { Shipment, ShipmentStatus } from '../types/shipment';
 import CustomInput from '../components/CustomInput';
 import { Camera } from 'react-native-camera-kit';
+import useBackHandler from '../hooks/useBackHandler';
+import useCameraScanner from '../hooks/useCameraScanner';
 
 const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   navigation,
 }) => {
   const [logoutVisible, setLogoutVisible] = useState(false);
   const insets = useSafeAreaInsets();
-  const [scannerVisible, setScannerVisible] = useState(false);
+  const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
 
   const {
     shipments,
+    shipmentBols,
     filteredShipments,
     searchQuery,
     isLoading,
@@ -55,39 +58,37 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   const pendingUploadEntries = usePendingUploadsStore(
     state => state.pendingUploads,
   );
+  const handleBack = useBackHandler(navigation);
 
   const displayShipments = useMemo<
     Array<{ shipment: Shipment; displayStatus: ShipmentStatus }>
   >(
     () =>
       filteredShipments.map(shipment => {
-        const status = shipment.status;
-        if (status !== 'Offline') {
-          return { shipment, displayStatus: status };
-        }
-
-        const sharePointCount = shipment.sharePointLinks?.length ?? 0;
         const pendingCount = pendingUploadEntries.filter(
           upload =>
             upload.shipmentNumber === shipment.bolNumber &&
             upload.uploadStatus === 'pending',
         ).length;
 
-        if (pendingCount === 0) {
-          return {
-            shipment,
-            displayStatus: sharePointCount > 0 ? 'Uploaded' : 'Ready to Ship',
-          };
+        if (pendingCount > 0) {
+          return { shipment, displayStatus: 'Offline' };
         }
 
-        return { shipment, displayStatus: 'Offline' };
+        const sharePointCount = shipment.sharePointLinks?.length ?? 0;
+        return {
+          shipment,
+          displayStatus: sharePointCount > 0 ? 'Uploaded' : 'Ready to Ship',
+        };
       }),
     [filteredShipments, pendingUploadEntries],
   );
   const initialLoadRequestedRef = useRef(false);
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const isSyncingRef = useRef(false);
+  const isRefreshingRef = useRef(false);
   const wasConnectedRef = useRef(isConnected);
 
   const handleReadCode = useCallback(
@@ -97,22 +98,26 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         return;
       }
 
-      console.log('BarcodeScanner scanned value:', codeStringValue);
-      Toast.show({
-        type: 'info',
-        text1: 'BarcodeScanner scanned value',
-        text2: codeStringValue,
-      });
+      const matchedBol = shipmentBols.find(b => b.bol === codeStringValue);
 
-      setTimeout(() => {
-        setScannerVisible(false);
-      }, 800);
+      if (matchedBol) {
+        closeScanner();
+        navigation.navigate('DeliveryShippingDetails', {
+          shipmentBol: matchedBol,
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'BOL Not Found',
+          text2: `No shipment found for BOL: ${codeStringValue}`,
+        });
+      }
     },
-    [],
+    [closeScanner, navigation, shipmentBols],
   );
 
   const handleSync = useCallback(async () => {
-    if (isSyncingRef.current) return;
+    if (isSyncingRef.current || isRefreshingRef.current) return;
     if (!isConnected) {
       Toast.show({
         type: 'error',
@@ -121,9 +126,10 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       });
       return;
     }
-    // immediate guard to prevent double-starts (double-tap or concurrent calls)
+
     isSyncingRef.current = true;
     setIsSyncing(true);
+
     try {
       await syncPendingUploads();
 
@@ -155,6 +161,37 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       setIsSyncing(false);
     }
   }, [isConnected, syncShipments, syncPendingUploads]);
+
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshingRef.current || isSyncingRef.current) return;
+    if (!isConnected) {
+      Toast.show({
+        type: 'error',
+        text1: 'Offline',
+        text2: 'No internet connection. Connect to refresh.',
+      });
+      return;
+    }
+
+    isRefreshingRef.current = true;
+    setIsRefreshing(true);
+
+    try {
+      await syncShipments();
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Refresh Error',
+        text2:
+          error instanceof Error
+            ? error.message
+            : 'Unable to refresh shipments. Please try again.',
+      });
+    } finally {
+      isRefreshingRef.current = false;
+      setIsRefreshing(false);
+    }
+  }, [isConnected, syncShipments]);
 
   useEffect(() => {
     usePendingUploadsStore
@@ -263,17 +300,22 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
       <ShipmentCard
         shipment={item.shipment}
         displayStatus={item.displayStatus}
-        onPress={() =>
-          // Prevent navigation while a sync/refresh is in progress
-          !(isLoading || isSyncing) &&
-          navigation.navigate('ShipmentDetail', {
-            shipmentId: item.shipment.id,
-            bolNumber: item.shipment.bolNumber,
-          })
-        }
+        onPress={() => {
+          if (isLoading || isSyncing) {
+            return;
+          }
+          const selectedBol = shipmentBols.find(
+            b => b.bol === item.shipment.bolNumber,
+          );
+          if (selectedBol) {
+            navigation.navigate('DeliveryShippingDetails', {
+              shipmentBol: selectedBol,
+            });
+          }
+        }}
       />
     ),
-    [navigation, isLoading, isSyncing],
+    [navigation, isLoading, isSyncing, shipmentBols],
   );
 
   const keyExtractor = useCallback(
@@ -284,11 +326,11 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
   return (
     <View style={styles.root}>
       <Header
-        title="Dashboard"
-        leftIconName="log-out-outline"
-        onLeftPress={() => setLogoutVisible(true)}
+        title="Shipment List"
+        leftIconName="arrow-back"
+        onLeftPress={handleBack}
         rightIconName="barcode-outline"
-        onRightPress={() => setScannerVisible(true)}
+        onRightPress={openScanner}
       />
 
       {!isConnected && (
@@ -298,36 +340,9 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
           </CustomText>
         </View>
       )}
-
-      <View style={styles.welcomeContainer}>
-        <View style={styles.welcomeIconWrapper}>
-          <Ionicons
-            name="person-circle-outline"
-            size={wp(8)}
-            color={COLORS.primary}
-          />
-        </View>
-        <View style={styles.welcomeTextWrapper}>
-          <CustomText
-            size={FontSize.normalLargeText}
-            color={COLORS.primary}
-            weight="semibold"
-          >
-            Welcome, John
-          </CustomText>
-          <CustomText
-            size={FontSize.smallMediumText}
-            color={COLORS.greyText}
-            style={{ marginTop: wp(1) }}
-          >
-            Driver
-          </CustomText>
-        </View>
-      </View>
-
       <View style={styles.searchContainer}>
         <CustomInput
-          placeholder="Search by BoL / Shipment No..."
+          placeholder="Search by BoL"
           value={searchQuery}
           onChangeText={searchShipments}
           editable={!isLoading && !isSyncing}
@@ -357,15 +372,13 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         ]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <EmptyView
-            message={isLoading ? 'Syncing...' : 'No shipments found.'}
-            iconName="cube-outline"
-          />
+          <EmptyView message="No shipments found." iconName="cube-outline" />
         }
         refreshControl={
           <RefreshControl
-            refreshing={isLoading}
-            onRefresh={handleSync}
+            refreshing={false}
+            enabled={!isLoading && !isRefreshing && !isSyncing}
+            onRefresh={handleRefresh}
             tintColor={COLORS.primary}
             colors={[COLORS.primary]}
             title="Syncing..."
@@ -382,13 +395,14 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
         <CustomButton
           title="Sync Now"
           onPress={handleSync}
-          loading={isLoading || isSyncing}
           disabled={isLoading || isSyncing}
         />
       </View>
 
+      <Loader visible={isLoading || isRefreshing || isSyncing} fullScreen />
+
       {/* Interaction blocker while syncing/refreshing */}
-      {(isLoading || isSyncing) && (
+      {(isLoading || isRefreshing || isSyncing) && (
         <View style={styles.interactionBlocker} pointerEvents="none" />
       )}
 
@@ -410,12 +424,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
               ratioOverlayColor="rgba(0,0,0,0.5)"
               onReadCode={handleReadCode}
             />
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => {
-                setScannerVisible(false);
-              }}
-            >
+            <TouchableOpacity style={styles.closeButton} onPress={closeScanner}>
               <CustomText
                 size={FontSize.normalText}
                 color={COLORS.white}
@@ -441,28 +450,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: wp(2), // vertical padding → hp
     paddingHorizontal: wp(4), // horizontal padding → wp
-  },
-  welcomeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: wp(4), // horizontal padding → wp
-    paddingVertical: wp(3),
-    marginHorizontal: wp(4),
-    marginTop: wp(4),
-    borderRadius: wp(4),
-    backgroundColor: COLORS.lightgray,
-  },
-  welcomeIconWrapper: {
-    width: wp(12),
-    height: wp(12),
-    borderRadius: wp(12),
-    backgroundColor: COLORS.lightBlue,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: wp(3),
-  },
-  welcomeTextWrapper: {
-    flex: 1,
   },
   searchContainer: {
     paddingHorizontal: wp(4), // horizontal padding → wp

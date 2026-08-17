@@ -1,14 +1,21 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import Header from '../components/Header';
 import CustomInput2 from '../components/CustomInput2';
 import CustomDropdown from '../components/CustomDropdown';
 import { COLORS } from '../assets/constants';
 import { wp } from '../utils/responsive';
+import useBackHandler from '../hooks/useBackHandler';
+import { toDigitsOnly } from '../utils/input';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { apiClient } from '../services/apiClient';
+import { API_ROUTES } from '../services/ApiRoutes';
 import type {
   ScanTypeNavigationProp,
   ScanTypeRouteProp,
+  ScanCompletedResult,
 } from '../navigation/types';
 import CustomButton from '../components/CustomButton';
 
@@ -22,26 +29,8 @@ const SCAN_TYPES = [
   { label: 'Release Hold', value: 'Release Hold' },
 ];
 
-const LOCATION_OPTIONS = [
-  { label: 'QC1', value: 'QC1' },
-  { label: 'QC2', value: 'QC2' },
-  { label: 'QCTRM', value: 'QCTRM' },
-];
-
-const HOLD_REASON_OPTIONS = [
-  { label: 'Damage (forklift/handling)', value: 'Damage (forklift/handling)' },
-  { label: 'Wrap / Packaging issue', value: 'Wrap / Packaging issue' },
-  { label: 'Missing Components', value: 'Missing Components' },
-  { label: 'QC dimensional issue', value: 'QC dimensional issue' },
-  { label: 'Finish/Coating issue', value: 'Finish/Coating issue' },
-  { label: 'Labeling / ID issue', value: 'Labeling / ID issue' },
-  { label: 'Documentation hold', value: 'Documentation hold' },
-  {
-    label: 'Customer change / pending approval',
-    value: 'Customer change / pending approval',
-  },
-  { label: 'Other', value: 'Other' },
-];
+const toDropdownOptions = (items: string[]) =>
+  items.map(item => ({ label: item, value: item }));
 
 interface ScanTypeScreenProps {
   navigation: ScanTypeNavigationProp;
@@ -52,18 +41,84 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { csvNumber } = route.params;
+  const { entityType, csv, orderNumber, panelCurrentStatus, panelLastScanType, trimBoxStatuses, onScanComplete } = route.params;
   const insets = useSafeAreaInsets();
+  const handleBack = useBackHandler(navigation);
+  const { isConnected } = useNetworkStatus();
 
   const [scanType, setScanType] = useState<ScanTypeValue>('Load');
+  const [boxNumber, setBoxNumber] = useState('');
   const [location, setLocation] = useState('');
   const [bol, setBol] = useState('');
   const [holdLocation, setHoldLocation] = useState('');
   const [holdReason, setHoldReason] = useState('');
   const [holdNotes, setHoldNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const [holdLocationOptions, setHoldLocationOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
+  const [holdReasonOptions, setHoldReasonOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
+  const [masterDataLoading, setMasterDataLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      if (!isConnected) {
+        Toast.show({
+          type: 'error',
+          text1: 'No Internet',
+          text2: 'Please check your internet connection.',
+        });
+        return;
+      }
+
+      setMasterDataLoading(true);
+      try {
+        const [locRes, reasonRes] = await Promise.all([
+          apiClient.get(API_ROUTES.HOLD_LOCATION_OPTIONS),
+          apiClient.get(API_ROUTES.HOLD_REASON_OPTIONS),
+        ]);
+
+        const locJson = await locRes.json();
+        if (locJson.success) {
+          setHoldLocationOptions(toDropdownOptions(locJson.data.holdLocations));
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: locJson.message || 'Failed to load hold location options.',
+          });
+        }
+
+        const reasonJson = await reasonRes.json();
+        if (reasonJson.success) {
+          setHoldReasonOptions(toDropdownOptions(reasonJson.data.holdReasons));
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: reasonJson.message || 'Failed to load hold reason options.',
+          });
+        }
+      } catch {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Failed to load master data. Please try again.',
+        });
+      } finally {
+        setMasterDataLoading(false);
+      }
+    };
+
+    fetchMasterData();
+  }, [isConnected]);
 
   const handleScanTypeChange = useCallback((value: string) => {
     setScanType(value as ScanTypeValue);
+    setBoxNumber('');
     setLocation('');
     setBol('');
     setHoldLocation('');
@@ -71,9 +126,122 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
     setHoldNotes('');
   }, []);
 
-  const handleSubmit = useCallback(() => {
-    // TODO: dispatch scan submission
-  }, []);
+  const handleSubmit = useCallback(async () => {
+    if (submitting) return;
+
+    if (entityType === 'Trim Box' && !boxNumber.trim()) {
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a Box Number.' });
+      return;
+    }
+    if ((scanType === 'Load' || scanType === 'Move' || scanType === 'Release Hold') && !location.trim()) {
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a Location.' });
+      return;
+    }
+    if (scanType === 'Ship' && !bol.trim()) {
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a BOL.' });
+      return;
+    }
+    if (scanType === 'QA Hold') {
+      if (!holdLocation) {
+        Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please select a Hold Location.' });
+        return;
+      }
+      if (!holdReason) {
+        Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please select a Hold Reason.' });
+        return;
+      }
+    }
+
+    if (entityType === 'Panel' && panelCurrentStatus === 'QA Hold' && scanType !== 'Release Hold') {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'This panel is currently on QA Hold. Please select "Release Hold" as the Scan Type.',
+      });
+      return;
+    }
+
+    if (entityType === 'Trim Box') {
+      const matchedBox = trimBoxStatuses.find(b => b.boxNumber === Number(boxNumber));
+      if (matchedBox?.status === 'QA Hold' && scanType !== 'Release Hold') {
+        Toast.show({
+          type: 'error',
+          text1: 'Validation Error',
+          text2: 'This Trim Box is currently on QA Hold. Please select "Release Hold" as the Scan Type.',
+        });
+        return;
+      }
+    }
+
+    // Shipped validation — must run after QA Hold checks
+    if (entityType === 'Panel' && panelLastScanType === 'Ship') {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'This item has already been shipped and cannot be scanned with the selected scan type.',
+      });
+      return;
+    }
+
+    if (entityType === 'Trim Box') {
+      const matchedBox = trimBoxStatuses.find(b => b.boxNumber === Number(boxNumber));
+      if (matchedBox?.status === 'Shipped') {
+        Toast.show({
+          type: 'error',
+          text1: 'Validation Error',
+          text2: 'This item has already been shipped and cannot be scanned with the selected scan type.',
+        });
+        return;
+      }
+    }
+
+    if (!isConnected) {
+      Toast.show({ type: 'error', text1: 'No Internet', text2: 'Please check your internet connection.' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const body = {
+        csv: entityType === 'Panel' ? csv : '',
+        orderNumber: entityType === 'Trim Box' ? orderNumber : '',
+        boxNumber: entityType === 'Trim Box' ? boxNumber : '0',
+        scanType,
+        location: (scanType === 'Load' || scanType === 'Move' || scanType === 'Release Hold') ? location : '',
+        bol: scanType === 'Ship' ? bol : '',
+        holdLocation: scanType === 'QA Hold' ? holdLocation : '',
+        holdReason: scanType === 'QA Hold' ? holdReason : '',
+        holdNotes: scanType === 'QA Hold' ? holdNotes : '',
+        entityType,
+      };
+
+      console.log('[ScanTypeScreen] Submit request:', { url: API_ROUTES.SCAN_SHIPMENT, body });
+      const res = await apiClient.post(API_ROUTES.SCAN_SHIPMENT, body);
+      const json = await res.json();
+      console.log('[ScanTypeScreen] Submit response:', { status: res.status, json });
+
+      if (json.success) {
+        const result: ScanCompletedResult = {
+          entityType,
+          csv,
+          orderNumber,
+          boxNumber,
+          scanType,
+          location: (scanType === 'Load' || scanType === 'Move' || scanType === 'Release Hold') ? location : '',
+          holdLocation: scanType === 'QA Hold' ? holdLocation : '',
+        };
+        onScanComplete?.(result);
+        Toast.show({ type: 'success', text1: 'Success', text2: json.message || 'Scan submitted successfully.' });
+        navigation.goBack();
+      } else {
+        Toast.show({ type: 'error', text1: 'Error', text2: json.message || 'Failed to submit scan.' });
+      }
+    } catch {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to submit scan. Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [submitting, entityType, csv, orderNumber, panelCurrentStatus, panelLastScanType, trimBoxStatuses, boxNumber, scanType, location, bol, holdLocation, holdReason, holdNotes, isConnected, navigation, onScanComplete]);
 
   const renderDynamicFields = () => {
     if (scanType === 'Ship') {
@@ -91,20 +259,30 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
     if (scanType === 'QA Hold') {
       return (
         <>
-          <CustomDropdown
-            label="Hold Location"
-            placeholder="Find Items"
-            options={LOCATION_OPTIONS}
-            value={holdLocation}
-            onValueChange={setHoldLocation}
-          />
-          <CustomDropdown
-            label="Hold Reason"
-            placeholder="Find Items"
-            options={HOLD_REASON_OPTIONS}
-            value={holdReason}
-            onValueChange={setHoldReason}
-          />
+          {masterDataLoading ? (
+            <ActivityIndicator
+              size="small"
+              color={COLORS.primary}
+              style={styles.loader}
+            />
+          ) : (
+            <>
+              <CustomDropdown
+                label="Hold Location"
+                placeholder="Find Items"
+                options={holdLocationOptions}
+                value={holdLocation}
+                onValueChange={setHoldLocation}
+              />
+              <CustomDropdown
+                label="Hold Reason"
+                placeholder="Find Items"
+                options={holdReasonOptions}
+                value={holdReason}
+                onValueChange={setHoldReason}
+              />
+            </>
+          )}
           <CustomInput2
             label="Hold Notes"
             placeholder="Notes"
@@ -123,7 +301,6 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
         placeholder=""
         value={location}
         onChangeText={setLocation}
-        keyboardType="numeric"
       />
     );
   };
@@ -131,9 +308,9 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   return (
     <View style={styles.root}>
       <Header
-        title={csvNumber}
+        title={entityType === 'Panel' ? `CSV - ${csv}` : `Order - ${orderNumber}`}
         leftIconName="arrow-back"
-        onLeftPress={() => navigation.goBack()}
+        onLeftPress={handleBack}
       />
 
       <ScrollView
@@ -148,6 +325,15 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
             value={scanType}
             onValueChange={handleScanTypeChange}
           />
+          {entityType === 'Trim Box' && (
+            <CustomInput2
+              label="Box Number"
+              placeholder=""
+              value={boxNumber}
+              onChangeText={v => setBoxNumber(toDigitsOnly(v))}
+              keyboardType="number-pad"
+            />
+          )}
           {renderDynamicFields()}
         </View>
       </ScrollView>
@@ -158,6 +344,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
         <CustomButton
           title="SUBMIT"
           onPress={handleSubmit}
+          loading={submitting}
           style={styles.nextBtn}
         />
       </View>
@@ -201,6 +388,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.primary,
+  },
+  loader: {
+    marginVertical: wp(4),
   },
 });
 

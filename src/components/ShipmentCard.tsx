@@ -6,6 +6,7 @@ import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import type { Shipment, ShipmentStatus } from '../types/shipment';
 import { usePendingUploadsStore } from '../store/pendingUploadsStore';
+import { displayValue } from '../utils/input';
 
 const STATUS_COLORS: Record<ShipmentStatus, string> = {
   'Ready to Ship': COLORS.pending,
@@ -38,7 +39,7 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({
   );
 
   let imageCount = sharePointCount;
-  if (shipment.status === 'Offline') {
+  if (status === 'Offline') {
     imageCount = sharePointCount + pendingCount;
   }
 
@@ -50,7 +51,7 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({
           color={COLORS.black}
           weight="bold"
         >
-          {shipment.bolNumber}
+          {displayValue(shipment.bolNumber) as string}
         </CustomText>
 
         <CustomText
@@ -58,7 +59,7 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({
           color={COLORS.greyText}
           style={styles.sub}
         >
-          {`SO: ${shipment.salesOrderNo}`}
+          {`Order No.: ${displayValue(shipment.salesOrderNo)}`}
         </CustomText>
 
         <CustomText
@@ -66,7 +67,7 @@ const ShipmentCard: React.FC<ShipmentCardProps> = ({
           color={COLORS.greyText}
           style={styles.sub}
         >
-          {shipment.date}
+          {displayValue(shipment.date) as string}
           {imageCount > 0
             ? `  •  ${imageCount} Photo${imageCount !== 1 ? 's' : ''}`
             : ''}

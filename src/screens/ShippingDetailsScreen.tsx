@@ -1,55 +1,56 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import Header from '../components/Header';
 import CustomText from '../components/CustomText';
+import Loader from '../components/Loader';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
-import type { ShippingDetailsNavigationProp } from '../navigation/types';
+import useBackHandler from '../hooks/useBackHandler';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { apiClient } from '../services/apiClient';
+import { getShipmentDetailsRequestConfig } from '../utils/shipmentDetails';
+import { displayValue } from '../utils/input';
+import type {
+  ShippingDetailsNavigationProp,
+  ShippingDetailsRouteProp,
+} from '../navigation/types';
 
-interface ShippingData {
-  approvalStatus: string;
-  shippingDetails: string;
-  project: string;
-  orderNumber: string;
-  customerType: string;
-  customer: string;
-  shipTo: string;
-  truckLoads: number;
-  extendedLoad: boolean;
-  specification: {
-    projectManager: string;
-    panelType: string;
-    thickness: number;
-    exteriorPanel: string;
-    interiorPanel: string;
-    trims: boolean;
-    accessories: boolean;
-    flatSheets: boolean;
-  };
+interface ShippingDetailsResponseData {
+  csv?: string;
+  title?: string;
+  orderNumber?: string;
+  customerType?: string;
+  customer?: string;
+  shipToName?: string;
+  truckLoadCount?: number;
+  extendedLoad?: string;
+  projectManager?: string;
+  panel?: string;
+  thickness?: string;
+  exteriorGa?: string;
+  exteriorProfile?: string;
+  exteriorColor?: string;
+  interiorProfile?: string;
+  interiorColor?: string;
+  interiorGa?: string;
+  trims?: string;
+  accessories?: string;
+  flatSheets?: string;
+  paymentStatus?: string;
 }
 
-const MOCK_DATA: ShippingData = {
-  approvalStatus: 'Approved',
-  shippingDetails: '26005484',
-  project: 'PR03061',
-  orderNumber: '24254992',
-  customerType: 'Falk Canada West',
-  customer: 'Metal Structure Concepts',
-  shipTo: '1000 KLO Road, Kelowna, BC V1Y 4XB',
-  truckLoads: 17,
-  extendedLoad: false,
-  specification: {
-    projectManager: 'Nick Kesik',
-    panelType: 'HFW40',
-    thickness: 0,
-    exteriorPanel: 'PVDF Dove Grey 24ga Micro',
-    interiorPanel: 'PVDF Dove Grey 26ga Micro',
-    trims: false,
-    accessories: false,
-    flatSheets: false,
-  },
-};
+interface ApiResponse {
+  success: boolean;
+  message?: string;
+  data: ShippingDetailsResponseData | null;
+}
+
+interface ShippingDetailsScreenProps {
+  navigation: ShippingDetailsNavigationProp;
+  route: ShippingDetailsRouteProp;
+}
 
 const InfoRow: React.FC<{ label: string; value: string }> = ({
   label,
@@ -95,46 +96,160 @@ const SpecRow: React.FC<{ label: string; value: string }> = ({
   </View>
 );
 
-const ShippingDetailsScreen: React.FC<{
-  navigation: ShippingDetailsNavigationProp;
-}> = ({ navigation }) => {
+const ShippingDetailsScreen: React.FC<ShippingDetailsScreenProps> = ({
+  navigation,
+  route,
+}) => {
+  const { entityType, identifier } = route.params || {};
   const insets = useSafeAreaInsets();
-  const data = MOCK_DATA;
-  const spec = data.specification;
+  const handleBack = useBackHandler(navigation);
+  const { isConnected } = useNetworkStatus();
 
-  return (
-    <View style={styles.root}>
-      <Header
-        title="Shipping Details"
-        leftIconName="arrow-back"
-        onLeftPress={() => navigation.goBack()}
-      />
+  const [loading, setLoading] = useState(false);
+  const [shipmentData, setShipmentData] =
+    useState<ShippingDetailsResponseData | null>(null);
+  const [apiMessage, setApiMessage] = useState('');
+  const [statusColor, setStatusColor] = useState<string>(COLORS.uploaded);
+  const requestInFlightRef = useRef(false);
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.contentContainer,
-          { paddingBottom: insets.bottom + wp(22) },
+  const buildPanelDisplay = useCallback(
+    (value1 = '', value2 = '', value3 = '') => {
+      return [value1, value2, value3]
+        .filter(value => value !== null && value !== undefined && value !== '')
+        .join(' ');
+    },
+    [],
+  );
+
+  const resetState = useCallback(() => {
+    setShipmentData(null);
+    setApiMessage('');
+    setStatusColor(COLORS.uploaded);
+  }, []);
+
+  useEffect(() => {
+    const fetchShipmentDetails = async () => {
+      if (!entityType || !identifier?.trim()) {
+        resetState();
+        setApiMessage('');
+        return;
+      }
+
+      if (requestInFlightRef.current) {
+        return;
+      }
+
+      if (!isConnected) {
+        resetState();
+        Toast.show({
+          type: 'error',
+          text1: 'No Internet',
+          text2: 'Please check your internet connection.',
+        });
+        setStatusColor(COLORS.failed);
+        return;
+      }
+
+      requestInFlightRef.current = true;
+      setLoading(true);
+      setApiMessage('');
+      setStatusColor(COLORS.uploaded);
+      setShipmentData(null);
+
+      try {
+        const { endpoint } = getShipmentDetailsRequestConfig(
+          entityType,
+          identifier,
+        );
+        const response = await apiClient.get(endpoint);
+        const json: ApiResponse = await response.json();
+
+        if (json.success && json.data) {
+          setShipmentData(json.data);
+          setApiMessage(
+            json.message || 'Shipment details retrieved successfully.',
+          );
+          setStatusColor(COLORS.uploaded);
+        } else {
+          resetState();
+          setApiMessage(json.message || 'No shipment details found.');
+          setStatusColor(COLORS.failed);
+        }
+      } catch {
+        resetState();
+        setApiMessage('Failed to fetch shipment details. Please try again.');
+        setStatusColor(COLORS.failed);
+      } finally {
+        requestInFlightRef.current = false;
+        setLoading(false);
+      }
+    };
+
+    fetchShipmentDetails();
+  }, [entityType, identifier, isConnected, resetState]);
+
+  const renderHeaderStatus = () => {
+    const paymentStatus = shipmentData?.paymentStatus?.trim();
+
+    const isApiError = statusColor === COLORS.failed;
+    const isApproved = paymentStatus === 'Approved';
+
+    return (
+      <View
+        style={[
+          styles.approvalBadge,
+          (!isApproved || isApiError) && styles.failedBadge,
         ]}
-        showsVerticalScrollIndicator={false}
       >
-        {/* Approval Status Badge */}
-        <View style={styles.approvalBadge}>
-          <CustomText
-            size={FontSize.normalText}
-            color={COLORS.white}
-            weight="semibold"
-          >
-            {`Shipment Approval : ${data.approvalStatus}`}
-          </CustomText>
-        </View>
+        <CustomText
+          size={FontSize.normalText}
+          color={COLORS.white}
+          weight="semibold"
+        >
+          {paymentStatus
+            ? `Shipment Prepayment : ${paymentStatus}`
+            : isApiError
+            ? apiMessage || 'Unable to load shipment details.'
+            : 'Shipment Prepayment : Pending'}
+        </CustomText>
+      </View>
+    );
+  };
 
-        {/* Shipping Info Card */}
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <View style={styles.loaderWrapper}>
+          <Loader visible />
+        </View>
+      );
+    }
+
+    const details = shipmentData;
+    const exteriorPanel = buildPanelDisplay(
+      details?.exteriorColor,
+      details?.exteriorGa,
+      details?.exteriorProfile,
+    );
+    const interiorPanel = buildPanelDisplay(
+      details?.interiorColor,
+      details?.interiorGa,
+      details?.interiorProfile,
+    );
+
+    return (
+      <>
+        {renderHeaderStatus()}
+
         <View style={styles.infoCard}>
           <InfoRow
             label="Shipping Details for CSV:"
-            value={data.shippingDetails}
+            value={displayValue(details?.csv) as string}
           />
-          <InfoRow label="Project:" value={data.project} />
+          <InfoRow
+            label="Project:"
+            value={displayValue(details?.title) as string}
+          />
 
           <View style={styles.twoColRow}>
             <View style={styles.twoColItem}>
@@ -150,7 +265,7 @@ const ShippingDetailsScreen: React.FC<{
                 color={COLORS.black}
                 weight="semibold"
               >
-                {data.orderNumber}
+                {displayValue(details?.orderNumber) as string}
               </CustomText>
             </View>
             <View style={styles.twoColItem}>
@@ -166,13 +281,19 @@ const ShippingDetailsScreen: React.FC<{
                 color={COLORS.black}
                 weight="semibold"
               >
-                {data.customerType}
+                {displayValue(details?.customerType) as string}
               </CustomText>
             </View>
           </View>
 
-          <InfoRow label="Customer:" value={data.customer} />
-          <InfoRow label="Ship To:" value={data.shipTo} />
+          <InfoRow
+            label="Customer:"
+            value={displayValue(details?.customer) as string}
+          />
+          <InfoRow
+            label="Ship To:"
+            value={displayValue(details?.shipToName) as string}
+          />
 
           <View style={styles.metricsRow}>
             <View style={styles.metricBox}>
@@ -188,7 +309,7 @@ const ShippingDetailsScreen: React.FC<{
                 color={COLORS.black}
                 weight="bold"
               >
-                {data.truckLoads}
+                {displayValue(details?.truckLoadCount) as string | number}
               </CustomText>
             </View>
             <View style={styles.metricBox}>
@@ -204,13 +325,12 @@ const ShippingDetailsScreen: React.FC<{
                 color={COLORS.black}
                 weight="bold"
               >
-                {data.extendedLoad ? 'YES' : 'NO'}
+                {displayValue(details?.extendedLoad) as string}
               </CustomText>
             </View>
           </View>
         </View>
 
-        {/* Specification Details Card */}
         <View style={styles.specCard}>
           <View style={styles.specHeader}>
             <CustomText
@@ -222,24 +342,62 @@ const ShippingDetailsScreen: React.FC<{
             </CustomText>
           </View>
           <View style={styles.specBody}>
-            <SpecRow label="Project Manager :" value={spec.projectManager} />
-            <SpecRow label="Panel Type:" value={spec.panelType} />
-            <SpecRow label="Thickness" value={String(spec.thickness)} />
+            <SpecRow
+              label="Project Manager :"
+              value={displayValue(details?.projectManager) as string}
+            />
+            <SpecRow
+              label="Panel Type:"
+              value={displayValue(details?.panel) as string}
+            />
+            <SpecRow
+              label="Thickness"
+              value={displayValue(details?.thickness) as string}
+            />
             <View style={styles.specDivider} />
-            <SpecRow label="Exterior Panel:" value={spec.exteriorPanel} />
-            <SpecRow label="Interior Panel:" value={spec.interiorPanel} />
+            <SpecRow
+              label="Exterior Panel:"
+              value={displayValue(exteriorPanel) as string}
+            />
+            <SpecRow
+              label="Interior Panel:"
+              value={displayValue(interiorPanel) as string}
+            />
             <View style={styles.specDivider} />
-            <SpecRow label="Trims:" value={spec.trims ? 'Yes' : 'No'} />
+            <SpecRow
+              label="Trims:"
+              value={displayValue(details?.trims) as string}
+            />
             <SpecRow
               label="Accessories:"
-              value={spec.accessories ? 'Yes' : 'No'}
+              value={displayValue(details?.accessories) as string}
             />
             <SpecRow
               label="Flat Sheets:"
-              value={spec.flatSheets ? 'Yes' : 'No'}
+              value={displayValue(details?.flatSheets) as string}
             />
           </View>
         </View>
+      </>
+    );
+  };
+
+  return (
+    <View style={styles.root}>
+      <Header
+        title="Shipping Details"
+        leftIconName="arrow-back"
+        onLeftPress={handleBack}
+      />
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingBottom: insets.bottom + wp(22) },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {renderContent()}
       </ScrollView>
 
       <View
@@ -248,7 +406,11 @@ const ShippingDetailsScreen: React.FC<{
         <TouchableOpacity
           activeOpacity={0.8}
           style={styles.fulfillmentButton}
-          onPress={() => navigation.navigate('OrderFulfillment')}
+          onPress={() =>
+            navigation.navigate('OrderFulfillment', {
+              orderNumber: shipmentData?.orderNumber || '',
+            })
+          }
         >
           <CustomText
             size={FontSize.normalLargeText}
@@ -278,6 +440,19 @@ const styles = StyleSheet.create({
     paddingVertical: wp(3),
     alignItems: 'center',
     marginBottom: wp(4),
+  },
+  approvalValue: {
+    marginTop: wp(1),
+    textAlign: 'center',
+  },
+  failedBadge: {
+    backgroundColor: COLORS.failed,
+  },
+  loaderWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: wp(40),
   },
   infoCard: {
     backgroundColor: COLORS.white,

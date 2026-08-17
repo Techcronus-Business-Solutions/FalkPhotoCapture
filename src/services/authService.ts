@@ -1,23 +1,19 @@
-import { getAccessToken } from './AccessTokenProvider';
 import { API_ROUTES } from './ApiRoutes';
+import type { AuthUser } from '../store/authStore';
 
 export interface LoginCredentials {
   username: string;
   password: string;
 }
 
-export interface AuthResponse {
-  token: string;
-  username: string;
-  driverID?: string;
-  name?: string;
-  message?: string;
+interface ApiLoginResponse {
+  success: boolean;
+  message: string;
+  data: AuthUser;
 }
 
-const LOGIN_URL = API_ROUTES.LOGIN;
-
 export const authService = {
-  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+  login: async (credentials: LoginCredentials): Promise<{ user: AuthUser; message: string }> => {
     const username = credentials.username.trim();
     const password = credentials.password.trim();
 
@@ -25,54 +21,41 @@ export const authService = {
       throw new Error('Username and password are required.');
     }
 
-    const accessToken = await getAccessToken();
+    console.log(`[API] POST ${API_ROUTES.LOGIN}`);
+    console.log('[API] Request Body:', JSON.stringify({ userName: username, password: '***' }, null, 2));
 
-    /*
-    // Original API - commented for offline demo
-    const response = await fetch(LOGIN_URL, {
+    const response = await fetch(API_ROUTES.LOGIN, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ username, password }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userName: username, password }),
     });
 
     const responseText = await response.text();
+    console.log(`[API] Response [${response.status}]:`, responseText);
 
     if (!response.ok) {
-      const message =
-        responseText || `Login failed with status ${response.status}`;
-      throw new Error(message);
+      let errorMessage = `Login failed with status ${response.status}`;
+      try {
+        const errData: { message?: string } = JSON.parse(responseText);
+        errorMessage = errData.message || errorMessage;
+      } catch {
+        // use default error message
+      }
+      throw new Error(errorMessage);
     }
 
-    let data: any;
+    let data: ApiLoginResponse;
     try {
       data = JSON.parse(responseText);
     } catch {
       throw new Error('Unable to parse login response.');
     }
 
-    if (typeof data.isLogin === 'boolean' && !data.isLogin) {
-      throw new Error(data.message || 'Incorrect credentials.');
+    if (!data.success) {
+      throw new Error(data.message || 'Login failed.');
     }
 
-    return {
-      token: accessToken,
-      username: data.username || username,
-      driverID: data.driverID,
-      name: data.name,
-      message: data.message,
-    };
-    */
-
-    return {
-      token: accessToken,
-      username,
-      driverID: 'DEMO-DRIVER',
-      name: 'Offline Demo Driver',
-      message: 'Offline demo login successful.',
-    };
+    return { user: data.data, message: data.message };
   },
 };
 

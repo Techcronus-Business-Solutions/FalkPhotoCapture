@@ -11,6 +11,7 @@ import { wp } from '../utils/responsive';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useAuthStore } from '../store/authStore';
 import type { ManagerDashboardNavigationProp } from '../navigation/types';
+import { displayValue } from '../utils/input';
 
 const ManagerDashboard: React.FC<{
   navigation: ManagerDashboardNavigationProp;
@@ -19,11 +20,12 @@ const ManagerDashboard: React.FC<{
   const [selected, setSelected] = useState('shipping');
   const [logoutVisible, setLogoutVisible] = useState(false);
   const logout = useAuthStore(state => state.logout);
+  const user = useAuthStore(state => state.user);
 
   const modules = [
     { key: 'shipping', title: 'Shipping Management' },
     { key: 'bendex', title: 'Bendex Box Allocation' },
-    { key: 'driver', title: 'Driver Assignment' },
+    { key: 'dashboard', title: 'Upload Images' },
   ];
 
   const handleLogout = async () => {
@@ -52,14 +54,7 @@ const ManagerDashboard: React.FC<{
             color={COLORS.primary}
             weight="semibold"
           >
-            Welcome, John
-          </CustomText>
-          <CustomText
-            size={FontSize.smallMediumText}
-            color={COLORS.greyText}
-            style={{ marginTop: wp(1) }}
-          >
-            Warehouse Manager
+            Welcome, {displayValue(user?.fullName) as string}
           </CustomText>
         </View>
       </View>
@@ -103,6 +98,12 @@ const ManagerDashboard: React.FC<{
           onPress={() => {
             if (selected === 'shipping') {
               navigation.navigate('ShippingManagement');
+            } else if (selected === 'bendex') {
+              navigation.navigate('BendexBoxAllocation');
+            } else if (selected === 'driver') {
+              navigation.navigate('DriverAllocation');
+            } else if (selected === 'dashboard') {
+              navigation.navigate('Dashboard');
             }
           }}
           style={styles.nextBtn}
