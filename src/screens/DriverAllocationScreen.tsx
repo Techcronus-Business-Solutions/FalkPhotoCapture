@@ -275,6 +275,7 @@ const DriverAllocationScreen: React.FC<{
               style={styles.camera}
               scanBarcode
               showFrame
+              resizeMode="cover"
               laserColor={COLORS.white}
               frameColor={COLORS.primary}
               ratioOverlay="1:1"
