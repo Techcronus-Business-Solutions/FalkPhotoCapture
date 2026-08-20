@@ -9,16 +9,13 @@
 /* Begin PBXBuildFile section */
 		0C80B921A6F3F58F76C31292 /* libPods-FalkPhotoCapture.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-FalkPhotoCapture.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		1EE0F8092C4E47E0A0A2A129 /* Bould-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A468B7E1064F4845B80BE111 /* Bould-Medium.ttf */; };
+		3462639D60794D9890732ACC /* Bould-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A36AFF9D14D4FCBADD7ACA5 /* Bould-Bold.ttf */; };
+		4FF86358AFF3446AADB56384 /* Bould-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F31A6D461D5B4D71A2B2564B /* Bould-SemiBold.ttf */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		1D0A791FDC3C4642AB523951 /* SF-Pro-Display-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 346481F5208D441483693CBA /* SF-Pro-Display-Bold.otf */; };
-		28637DBA1630488C929EC7CE /* SF-Pro-Display-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 27B4A9075B5541C2A6D80716 /* SF-Pro-Display-Medium.otf */; };
-		0CF0EFA261ED42A094B99EF1 /* SF-Pro-Display-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = 32C6483F25D643D9AC0060D7 /* SF-Pro-Display-Regular.otf */; };
-		F210C23BFC9740A9B7332D44 /* SF-Pro-Display-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 2CEC5B01A732412C9E30235C /* SF-Pro-Display-Semibold.otf */; };
-		3462639D60794D9890732ACC /* Bould-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A36AFF9D14D4FCBADD7ACA5 /* Bould-Bold.ttf */; };
-		1EE0F8092C4E47E0A0A2A129 /* Bould-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A468B7E1064F4845B80BE111 /* Bould-Medium.ttf */; };
 		ACE4F9921CFD4A0299422642 /* Bould-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 2FA8919B12324044BED757E4 /* Bould-Regular.ttf */; };
-		4FF86358AFF3446AADB56384 /* Bould-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F31A6D461D5B4D71A2B2564B /* Bould-SemiBold.ttf */; };
+		B4E358C29BF963547A4B7D36 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,20 +23,16 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = FalkPhotoCapture/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = FalkPhotoCapture/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = FalkPhotoCapture/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2FA8919B12324044BED757E4 /* Bould-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Bould-Regular.ttf"; path = "../src/assets/fonts/Bould-Regular.ttf"; sourceTree = "<group>"; };
+		3A36AFF9D14D4FCBADD7ACA5 /* Bould-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Bould-Bold.ttf"; path = "../src/assets/fonts/Bould-Bold.ttf"; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-FalkPhotoCapture.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FalkPhotoCapture.debug.xcconfig"; path = "Target Support Files/Pods-FalkPhotoCapture/Pods-FalkPhotoCapture.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-FalkPhotoCapture.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FalkPhotoCapture.release.xcconfig"; path = "Target Support Files/Pods-FalkPhotoCapture/Pods-FalkPhotoCapture.release.xcconfig"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-FalkPhotoCapture.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-FalkPhotoCapture.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = FalkPhotoCapture/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = FalkPhotoCapture/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		A468B7E1064F4845B80BE111 /* Bould-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Bould-Medium.ttf"; path = "../src/assets/fonts/Bould-Medium.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		346481F5208D441483693CBA /* SF-Pro-Display-Bold.otf */ = {isa = PBXFileReference; name = "SF-Pro-Display-Bold.otf"; path = "../src/assets/fonts/SF-Pro-Display-Bold.otf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		27B4A9075B5541C2A6D80716 /* SF-Pro-Display-Medium.otf */ = {isa = PBXFileReference; name = "SF-Pro-Display-Medium.otf"; path = "../src/assets/fonts/SF-Pro-Display-Medium.otf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		32C6483F25D643D9AC0060D7 /* SF-Pro-Display-Regular.otf */ = {isa = PBXFileReference; name = "SF-Pro-Display-Regular.otf"; path = "../src/assets/fonts/SF-Pro-Display-Regular.otf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		2CEC5B01A732412C9E30235C /* SF-Pro-Display-Semibold.otf */ = {isa = PBXFileReference; name = "SF-Pro-Display-Semibold.otf"; path = "../src/assets/fonts/SF-Pro-Display-Semibold.otf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		3A36AFF9D14D4FCBADD7ACA5 /* Bould-Bold.ttf */ = {isa = PBXFileReference; name = "Bould-Bold.ttf"; path = "../src/assets/fonts/Bould-Bold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		A468B7E1064F4845B80BE111 /* Bould-Medium.ttf */ = {isa = PBXFileReference; name = "Bould-Medium.ttf"; path = "../src/assets/fonts/Bould-Medium.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		2FA8919B12324044BED757E4 /* Bould-Regular.ttf */ = {isa = PBXFileReference; name = "Bould-Regular.ttf"; path = "../src/assets/fonts/Bould-Regular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		F31A6D461D5B4D71A2B2564B /* Bould-SemiBold.ttf */ = {isa = PBXFileReference; name = "Bould-SemiBold.ttf"; path = "../src/assets/fonts/Bould-SemiBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		F31A6D461D5B4D71A2B2564B /* Bould-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Bould-SemiBold.ttf"; path = "../src/assets/fonts/Bould-SemiBold.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,6 +98,17 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		93BABD80256A4A369EA3AC55 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				3A36AFF9D14D4FCBADD7ACA5 /* Bould-Bold.ttf */,
+				A468B7E1064F4845B80BE111 /* Bould-Medium.ttf */,
+				2FA8919B12324044BED757E4 /* Bould-Regular.ttf */,
+				F31A6D461D5B4D71A2B2564B /* Bould-SemiBold.ttf */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
@@ -113,22 +117,6 @@
 			);
 			path = Pods;
 			sourceTree = "<group>";
-		};
-		93BABD80256A4A369EA3AC55 /* Resources */ = {
-			isa = "PBXGroup";
-			children = (
-				346481F5208D441483693CBA /* SF-Pro-Display-Bold.otf */,
-				27B4A9075B5541C2A6D80716 /* SF-Pro-Display-Medium.otf */,
-				32C6483F25D643D9AC0060D7 /* SF-Pro-Display-Regular.otf */,
-				2CEC5B01A732412C9E30235C /* SF-Pro-Display-Semibold.otf */,
-				3A36AFF9D14D4FCBADD7ACA5 /* Bould-Bold.ttf */,
-				A468B7E1064F4845B80BE111 /* Bould-Medium.ttf */,
-				2FA8919B12324044BED757E4 /* Bould-Regular.ttf */,
-				F31A6D461D5B4D71A2B2564B /* Bould-SemiBold.ttf */,
-			);
-			name = Resources;
-			sourceTree = "<group>";
-			path = "";
 		};
 /* End PBXGroup section */
 
@@ -192,14 +180,11 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
-				1D0A791FDC3C4642AB523951 /* SF-Pro-Display-Bold.otf in Resources */,
-				28637DBA1630488C929EC7CE /* SF-Pro-Display-Medium.otf in Resources */,
-				0CF0EFA261ED42A094B99EF1 /* SF-Pro-Display-Regular.otf in Resources */,
-				F210C23BFC9740A9B7332D44 /* SF-Pro-Display-Semibold.otf in Resources */,
 				3462639D60794D9890732ACC /* Bould-Bold.ttf in Resources */,
 				1EE0F8092C4E47E0A0A2A129 /* Bould-Medium.ttf in Resources */,
 				ACE4F9921CFD4A0299422642 /* Bould-Regular.ttf in Resources */,
 				4FF86358AFF3446AADB56384 /* Bould-SemiBold.ttf in Resources */,
+				B4E358C29BF963547A4B7D36 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -299,6 +284,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TU3KV8VWQ7;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = FalkPhotoCapture/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -312,7 +298,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.app.saleswiseb2b;
 				PRODUCT_NAME = FalkPhotoCapture;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -329,6 +315,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TU3KV8VWQ7;
 				INFOPLIST_FILE = FalkPhotoCapture/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -341,7 +328,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.app.saleswiseb2b;
 				PRODUCT_NAME = FalkPhotoCapture;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
@@ -411,6 +398,10 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DFOLLY_NO_CONFIG",
@@ -418,8 +409,13 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
 				);
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				USE_HERMES = true;
 			};
 			name = Debug;
 		};
@@ -476,6 +472,10 @@
 					"\"$(inherited)\"",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DFOLLY_NO_CONFIG",
@@ -483,8 +483,12 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
 				);
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;

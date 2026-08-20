@@ -26,21 +26,39 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<false/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
+<key>NSAppTransportSecurity</key>
+<dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <false/>
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+    <key>NSExceptionDomains</key>
+    <dict>
+        <key>tbs01.westus.cloudapp.azure.com</key>
+        <dict>
+            <key>NSIncludesSubdomains</key>
+            <true/>
+            <key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
+            <true/>
+        </dict>
+    </dict>
+</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>FalkPhotoCapture needs camera access to capture shipment photos.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>FalkPhotoCapture needs photo library access to attach shipment photos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>FalkPhotoCapture needs permission to save photos.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FalkPhotoCapture needs photo library access to attach shipment photos.</string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Ionicons.ttf</string>
+		<string>Bould-Bold.ttf</string>
+		<string>Bould-Medium.ttf</string>
+		<string>Bould-Regular.ttf</string>
+		<string>Bould-SemiBold.ttf</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -60,12 +78,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>UIAppFonts</key>
-	<array>
-		<string>Bould-Bold.ttf</string>
-		<string>Bould-Medium.ttf</string>
-		<string>Bould-Regular.ttf</string>
-		<string>Bould-SemiBold.ttf</string>
-	</array>
 </dict>
 </plist>

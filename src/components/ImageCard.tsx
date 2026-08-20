@@ -5,7 +5,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import FastImage, { type Source } from 'react-native-fast-image';
+import FastImage, { type Source } from '@d11/react-native-fast-image';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
