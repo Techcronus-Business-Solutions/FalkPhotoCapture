@@ -12,34 +12,11 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { apiClient } from '../services/apiClient';
 import { getShipmentDetailsRequestConfig } from '../utils/shipmentDetails';
 import { displayValue } from '../utils/input';
+import type { ShippingDetailsResponseData } from '../types/shippingDetails';
 import type {
   ShippingDetailsNavigationProp,
   ShippingDetailsRouteProp,
 } from '../navigation/types';
-
-interface ShippingDetailsResponseData {
-  csv?: string;
-  title?: string;
-  orderNumber?: string;
-  customerType?: string;
-  customer?: string;
-  shipToName?: string;
-  truckLoadCount?: number;
-  extendedLoad?: string;
-  projectManager?: string;
-  panel?: string;
-  thickness?: string;
-  exteriorGa?: string;
-  exteriorProfile?: string;
-  exteriorColor?: string;
-  interiorProfile?: string;
-  interiorColor?: string;
-  interiorGa?: string;
-  trims?: string;
-  accessories?: string;
-  flatSheets?: string;
-  paymentStatus?: string;
-}
 
 interface ApiResponse {
   success: boolean;
@@ -100,7 +77,8 @@ const ShippingDetailsScreen: React.FC<ShippingDetailsScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { entityType, identifier } = route.params || {};
+  const { entityType, identifier, shipmentDetails: preloadedData } =
+    route.params || {};
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
   const { isConnected } = useNetworkStatus();
@@ -128,6 +106,20 @@ const ShippingDetailsScreen: React.FC<ShippingDetailsScreenProps> = ({
   }, []);
 
   useEffect(() => {
+    // If ShippingManagementScreen already fetched and passed the data, use it
+    // directly without making another API call.
+    if (preloadedData !== undefined) {
+      if (preloadedData) {
+        setShipmentData(preloadedData);
+        setStatusColor(COLORS.uploaded);
+      } else {
+        setApiMessage('No shipment details found.');
+        setStatusColor(COLORS.failed);
+      }
+      return;
+    }
+
+    // Fallback: fetch from API when navigated to without pre-loaded data.
     const fetchShipmentDetails = async () => {
       if (!entityType || !identifier?.trim()) {
         resetState();
@@ -186,7 +178,7 @@ const ShippingDetailsScreen: React.FC<ShippingDetailsScreenProps> = ({
     };
 
     fetchShipmentDetails();
-  }, [entityType, identifier, isConnected, resetState]);
+  }, [entityType, identifier, isConnected, resetState, preloadedData]);
 
   const renderHeaderStatus = () => {
     const paymentStatus = shipmentData?.paymentStatus?.trim();

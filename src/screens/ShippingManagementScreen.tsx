@@ -23,6 +23,8 @@ import { displayValue, toDigitsOnly } from '../utils/input';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { apiClient } from '../services/apiClient';
 import { API_ROUTES } from '../services/ApiRoutes';
+import { getShipmentDetailsRequestConfig } from '../utils/shipmentDetails';
+import type { ShippingDetailsResponseData } from '../types/shippingDetails';
 import type {
   ShippingManagementNavigationProp,
   ScanCompletedResult,
@@ -42,7 +44,13 @@ interface PanelData {
   modified: string;
 }
 
-type PanelStatus = 'active' | 'hold' | 'not-found' | 'error' | null;
+type PanelStatus =
+  | 'active'
+  | 'hold'
+  | 'not-found'
+  | 'new-entity'
+  | 'error'
+  | null;
 
 interface TrimBox {
   orderNumber: number;
@@ -54,7 +62,29 @@ interface TrimBox {
   lastScanType?: string;
 }
 
-type TrimBoxStatus = 'active' | 'partial-hold' | 'not-found' | 'error' | null;
+type TrimBoxStatus =
+  | 'active'
+  | 'partial-hold'
+  | 'not-found'
+  | 'new-entity'
+  | 'error'
+  | null;
+
+// ─── Fetch result types ───────────────────────────────────────────────────────
+
+interface PanelFetchResult {
+  orderExists: boolean;
+  shipmentData: ShippingDetailsResponseData | null;
+  panelData: PanelData | null;
+  panelStatus: PanelStatus;
+}
+
+interface TrimBoxFetchResult {
+  orderExists: boolean;
+  shipmentData: ShippingDetailsResponseData | null;
+  trimBoxList: TrimBox[];
+  trimBoxStatus: TrimBoxStatus;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -98,6 +128,12 @@ const ShippingManagementScreen: React.FC<{
   const [orderNumber, setOrderNumber] = useState('');
   const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
 
+  // Whether the base order/CSV was confirmed to exist by the Shipment Details API.
+  // null = not yet determined, true = exists, false = does not exist.
+  const [orderExists, setOrderExists] = useState<boolean | null>(null);
+  const [shipmentDetailsData, setShipmentDetailsData] =
+    useState<ShippingDetailsResponseData | null>(null);
+
   const [panelStatus, setPanelStatus] = useState<PanelStatus>(null);
   const [panelData, setPanelData] = useState<PanelData | null>(null);
   const [panelMessage, setPanelMessage] = useState('');
@@ -112,17 +148,20 @@ const ShippingManagementScreen: React.FC<{
   // from ScanTypeScreen (the screen updates state via the onScanComplete callback instead).
   const skipNextFocusRefetchRef = useRef(false);
 
-  // Loading state for when user taps Scan Type button and we're fetching status before navigation
+  // In-flight guards to prevent concurrent duplicate fetches.
+  const panelFetchInFlightRef = useRef(false);
+  const trimBoxFetchInFlightRef = useRef(false);
+
   const [scanTypeNavigationLoading, setScanTypeNavigationLoading] =
     useState(false);
-
-  // Loading state for when user taps View Shipping Details button and we're fetching status before navigation
   const [viewShippingDetailsLoading, setViewShippingDetailsLoading] =
     useState(false);
 
   useEffect(() => {
     setCsvNumber('');
     setOrderNumber('');
+    setOrderExists(null);
+    setShipmentDetailsData(null);
     setPanelStatus(null);
     setPanelData(null);
     setPanelMessage('');
@@ -131,7 +170,209 @@ const ShippingManagementScreen: React.FC<{
     setTrimBoxMessage('');
   }, [entryType]);
 
-  // Keep a ref with the latest refresh logic so the focus listener never goes stale
+  // ─── Combined fetch: Shipment Details → Panel Status ─────────────────────
+  // Determines order existence (Shipment Details API) then fetches panel scan
+  // history (Panel Status API). Returns the resolved result for use in button
+  // handlers that may call this if the user hasn't searched yet.
+
+  const fetchPanelWithDetails = useCallback(
+    async (csv: string): Promise<PanelFetchResult> => {
+      const empty: PanelFetchResult = {
+        orderExists: false,
+        shipmentData: null,
+        panelData: null,
+        panelStatus: null,
+      };
+
+      if (!csv.trim()) return empty;
+      if (panelFetchInFlightRef.current) return empty;
+
+      if (!isConnected) {
+        Toast.show({
+          type: 'error',
+          text1: 'No Internet',
+          text2: 'Please check your internet connection.',
+        });
+        return empty;
+      }
+
+      panelFetchInFlightRef.current = true;
+      Keyboard.dismiss();
+      setPanelData(null);
+      setPanelStatus(null);
+      setPanelMessage('');
+      setOrderExists(null);
+      setShipmentDetailsData(null);
+      setPanelLoading(true);
+
+      try {
+        // Step 1 — Shipment Details API (source of truth for order existence)
+        const { endpoint } = getShipmentDetailsRequestConfig('Panel', csv);
+        const detailRes = await apiClient.get(endpoint);
+        const detailJson = await detailRes.json();
+
+        if (!detailJson.success || !detailJson.data) {
+          const msg = detailJson.message || 'Order not found.';
+          setOrderExists(false);
+          setPanelMessage(msg);
+          setPanelStatus('not-found');
+          return {
+            orderExists: false,
+            shipmentData: null,
+            panelData: null,
+            panelStatus: 'not-found',
+          };
+        }
+
+        const shipmentData = detailJson.data as ShippingDetailsResponseData;
+        setOrderExists(true);
+        setShipmentDetailsData(shipmentData);
+
+        // Step 2 — Panel Status API (scan history only; failure = new panel)
+        const statusRes = await apiClient.get(
+          `${API_ROUTES.PANEL_BY_CSV}/${csv.trim()}`,
+        );
+        const statusJson = await statusRes.json();
+
+        if (statusJson.success && statusJson.data) {
+          const pd = statusJson.data as PanelData;
+          const pStatus: PanelStatus =
+            pd.status === 'QA Hold' ? 'hold' : 'active';
+          setPanelData(pd);
+          setPanelStatus(pStatus);
+          return {
+            orderExists: true,
+            shipmentData,
+            panelData: pd,
+            panelStatus: pStatus,
+          };
+        } else {
+          const msg =
+            statusJson.message || 'No previous scan found for this panel.';
+          setPanelMessage(msg);
+          setPanelStatus('new-entity');
+          return {
+            orderExists: true,
+            shipmentData,
+            panelData: null,
+            panelStatus: 'new-entity',
+          };
+        }
+      } catch {
+        setPanelMessage('Failed to fetch panel status. Please try again.');
+        setPanelStatus('error');
+        setOrderExists(false);
+        return { ...empty, panelStatus: 'error' };
+      } finally {
+        panelFetchInFlightRef.current = false;
+        setPanelLoading(false);
+      }
+    },
+    [isConnected],
+  );
+
+  // ─── Combined fetch: Shipment Details → Trim Box Status ──────────────────
+
+  const fetchTrimBoxWithDetails = useCallback(
+    async (order: string): Promise<TrimBoxFetchResult> => {
+      const empty: TrimBoxFetchResult = {
+        orderExists: false,
+        shipmentData: null,
+        trimBoxList: [],
+        trimBoxStatus: null,
+      };
+
+      if (!order.trim()) return empty;
+      if (trimBoxFetchInFlightRef.current) return empty;
+
+      if (!isConnected) {
+        Toast.show({
+          type: 'error',
+          text1: 'No Internet',
+          text2: 'Please check your internet connection.',
+        });
+        return empty;
+      }
+
+      trimBoxFetchInFlightRef.current = true;
+      Keyboard.dismiss();
+      setTrimBoxList([]);
+      setTrimBoxStatus(null);
+      setTrimBoxMessage('');
+      setOrderExists(null);
+      setShipmentDetailsData(null);
+      setTrimBoxLoading(true);
+
+      try {
+        // Step 1 — Shipment Details API
+        const { endpoint } = getShipmentDetailsRequestConfig('Trim Box', order);
+        const detailRes = await apiClient.get(endpoint);
+        const detailJson = await detailRes.json();
+
+        if (!detailJson.success || !detailJson.data) {
+          const msg = detailJson.message || 'Order not found.';
+          setOrderExists(false);
+          setTrimBoxMessage(msg);
+          setTrimBoxStatus('not-found');
+          return {
+            orderExists: false,
+            shipmentData: null,
+            trimBoxList: [],
+            trimBoxStatus: 'not-found',
+          };
+        }
+
+        const shipmentData = detailJson.data as ShippingDetailsResponseData;
+        setOrderExists(true);
+        setShipmentDetailsData(shipmentData);
+
+        // Step 2 — Trim Box Status API (failure = new trim box)
+        const statusRes = await apiClient.get(
+          `${API_ROUTES.TRIM_BOX_BY_ORDER}/${order.trim()}`,
+        );
+        const statusJson = await statusRes.json();
+
+        if (statusJson.success && (statusJson.data as TrimBox[]).length > 0) {
+          const sorted = [...(statusJson.data as TrimBox[])].sort(
+            (a, b) => a.boxNumber - b.boxNumber,
+          );
+          const hasHold = sorted.some(b => b.status === 'QA Hold');
+          const tbStatus: TrimBoxStatus = hasHold ? 'partial-hold' : 'active';
+          setTrimBoxList(sorted);
+          setTrimBoxStatus(tbStatus);
+          return {
+            orderExists: true,
+            shipmentData,
+            trimBoxList: sorted,
+            trimBoxStatus: tbStatus,
+          };
+        } else {
+          const msg =
+            statusJson.message || 'No previous scan found for this order.';
+          setTrimBoxMessage(msg);
+          setTrimBoxStatus('new-entity');
+          return {
+            orderExists: true,
+            shipmentData,
+            trimBoxList: [],
+            trimBoxStatus: 'new-entity',
+          };
+        }
+      } catch {
+        setTrimBoxMessage('Failed to fetch trim box status. Please try again.');
+        setTrimBoxStatus('error');
+        setOrderExists(false);
+        return { ...empty, trimBoxStatus: 'error' };
+      } finally {
+        trimBoxFetchInFlightRef.current = false;
+        setTrimBoxLoading(false);
+      }
+    },
+    [isConnected],
+  );
+
+  // ─── Focus listener ───────────────────────────────────────────────────────
+
   const onFocusRef = useRef<() => void>(() => {});
   useEffect(() => {
     onFocusRef.current = () => {
@@ -140,9 +381,9 @@ const ShippingManagementScreen: React.FC<{
         return;
       }
       if (entryType === 'Panel' && csvNumber.trim()) {
-        fetchPanelStatus(csvNumber);
+        fetchPanelWithDetails(csvNumber);
       } else if (entryType === 'Trim Box' && orderNumber.trim()) {
-        fetchTrimBoxStatus(orderNumber);
+        fetchTrimBoxWithDetails(orderNumber);
       }
     };
   });
@@ -151,100 +392,7 @@ const ShippingManagementScreen: React.FC<{
     return navigation.addListener('focus', () => onFocusRef.current());
   }, [navigation]);
 
-  const fetchPanelStatus = useCallback(
-    async (csv: string): Promise<boolean> => {
-      if (!csv.trim() || panelLoading) return false;
-
-      if (!isConnected) {
-        Toast.show({
-          type: 'error',
-          text1: 'No Internet',
-          text2: 'Please check your internet connection.',
-        });
-        return false;
-      }
-
-      Keyboard.dismiss();
-      setPanelData(null);
-      setPanelStatus(null);
-      setPanelMessage('');
-      setPanelLoading(true);
-
-      try {
-        const res = await apiClient.get(
-          `${API_ROUTES.PANEL_BY_CSV}/${csv.trim()}`,
-        );
-        const json = await res.json();
-
-        if (json.success) {
-          const data = json.data as PanelData;
-          setPanelData(data);
-          setPanelStatus(data.status === 'QA Hold' ? 'hold' : 'active');
-          return true;
-        } else {
-          setPanelMessage(json.message || 'Panel not found.');
-          setPanelStatus('not-found');
-          return false;
-        }
-      } catch {
-        setPanelMessage('Failed to fetch panel status. Please try again.');
-        setPanelStatus('error');
-        return false;
-      } finally {
-        setPanelLoading(false);
-      }
-    },
-    [isConnected, panelLoading],
-  );
-
-  const fetchTrimBoxStatus = useCallback(
-    async (order: string): Promise<boolean> => {
-      if (!order.trim() || trimBoxLoading) return false;
-
-      if (!isConnected) {
-        Toast.show({
-          type: 'error',
-          text1: 'No Internet',
-          text2: 'Please check your internet connection.',
-        });
-        return false;
-      }
-
-      Keyboard.dismiss();
-      setTrimBoxList([]);
-      setTrimBoxStatus(null);
-      setTrimBoxMessage('');
-      setTrimBoxLoading(true);
-
-      try {
-        const res = await apiClient.get(
-          `${API_ROUTES.TRIM_BOX_BY_ORDER}/${order.trim()}`,
-        );
-        const json = await res.json();
-
-        if (json.success && (json.data as TrimBox[]).length > 0) {
-          const sorted = [...(json.data as TrimBox[])].sort(
-            (a, b) => a.boxNumber - b.boxNumber,
-          );
-          setTrimBoxList(sorted);
-          const hasHold = sorted.some(b => b.status === 'QA Hold');
-          setTrimBoxStatus(hasHold ? 'partial-hold' : 'active');
-          return true;
-        } else {
-          setTrimBoxMessage(json.message || 'No trim boxes found.');
-          setTrimBoxStatus('not-found');
-          return false;
-        }
-      } catch {
-        setTrimBoxMessage('Failed to fetch trim box status. Please try again.');
-        setTrimBoxStatus('error');
-        return false;
-      } finally {
-        setTrimBoxLoading(false);
-      }
-    },
-    [isConnected, trimBoxLoading],
-  );
+  // ─── Barcode scanner ─────────────────────────────────────────────────────
 
   const handleReadCode = useCallback(
     (event: { nativeEvent: { codeStringValue: string } }) => {
@@ -253,31 +401,40 @@ const ShippingManagementScreen: React.FC<{
 
       if (entryType === 'Panel') {
         setCsvNumber(scanned);
+        closeScanner();
+        fetchPanelWithDetails(scanned);
       } else {
         setOrderNumber(scanned);
-      }
-
-      closeScanner();
-
-      if (entryType === 'Panel') {
-        fetchPanelStatus(scanned);
-      } else {
-        fetchTrimBoxStatus(scanned);
+        closeScanner();
+        fetchTrimBoxWithDetails(scanned);
       }
     },
-    [entryType, fetchPanelStatus, fetchTrimBoxStatus, closeScanner],
+    [entryType, fetchPanelWithDetails, fetchTrimBoxWithDetails, closeScanner],
   );
 
   const handleBarcodePress = openScanner;
 
-  // Applies a successful scan result directly to local state, avoiding a redundant API call.
+  // ─── Apply scan result (callback from ScanTypeScreen) ────────────────────
+  // Updates local state directly so no redundant API call is needed on return.
+  // Handles first-time scans where panelData was null / trimBoxList was empty.
+
   const applyScanResult = useCallback(
     (result: ScanCompletedResult) => {
       if (result.entityType === 'Panel') {
         setPanelData(prev => {
-          if (!prev) return prev;
+          const base: PanelData = prev ?? {
+            entityType: 'Panel',
+            csv: result.csv,
+            lastScanType: '',
+            currentLocation: '',
+            holdLocation: '',
+            status: '',
+            lastScanTime: '',
+            created: new Date().toISOString(),
+            modified: '',
+          };
           const updated: PanelData = {
-            ...prev,
+            ...base,
             lastScanType: result.scanType,
             modified: new Date().toISOString(),
           };
@@ -306,7 +463,24 @@ const ShippingManagementScreen: React.FC<{
         setPanelStatus(result.scanType === 'QA Hold' ? 'hold' : 'active');
       } else {
         const boxNum = Number(result.boxNumber);
-        const updatedList = trimBoxList.map(b => {
+        const prevList = trimBoxList;
+        const exists = prevList.some(b => b.boxNumber === boxNum);
+        const baseList: TrimBox[] = exists
+          ? prevList
+          : [
+              ...prevList,
+              {
+                orderNumber: Number(result.orderNumber) || 0,
+                entityType: 'Trim Box',
+                boxNumber: boxNum,
+                status: '',
+                currentLocation: '',
+                holdLocation: '',
+                lastScanType: '',
+              },
+            ];
+
+        const updatedList = baseList.map(b => {
           if (b.boxNumber !== boxNum) return b;
           const u: TrimBox = { ...b, lastScanType: result.scanType };
           if (result.scanType === 'QA Hold') {
@@ -331,6 +505,7 @@ const ShippingManagementScreen: React.FC<{
           }
           return u;
         });
+
         setTrimBoxList(updatedList);
         const hasHold = updatedList.some(b => b.status === 'QA Hold');
         setTrimBoxStatus(hasHold ? 'partial-hold' : 'active');
@@ -339,115 +514,57 @@ const ShippingManagementScreen: React.FC<{
     [trimBoxList],
   );
 
-  // ─── Shared validation function ───────────────────────────────────────────
-  // Validates that status data is available before navigation.
-  // Returns true if status is valid and available, false otherwise.
-  const validateStatusBeforeNavigation =
-    useCallback(async (): Promise<boolean> => {
-      const identifier = entryType === 'Panel' ? csvNumber : orderNumber;
-      if (!identifier.trim()) {
-        Toast.show({
-          type: 'error',
-          text1: 'Validation Error',
-          text2: 'Please enter a valid identifier.',
-        });
-        return false;
-      }
-
-      if (entryType === 'Panel') {
-        // If panel data is not available, fetch it
-        if (!panelData) {
-          const success = await fetchPanelStatus(csvNumber);
-          if (!success) {
-            Toast.show({
-              type: 'error',
-              text1: 'Error',
-              text2:
-                panelMessage ||
-                'Unable to fetch panel status. Please try again.',
-            });
-          }
-          return success;
-        } else {
-          // Data is already available, validate it's not in error state
-          const isValid =
-            panelStatus !== 'not-found' && panelStatus !== 'error';
-          if (!isValid) {
-            Toast.show({
-              type: 'error',
-              text1: 'Error',
-              text2:
-                panelMessage ||
-                'Unable to fetch panel status. Please try again.',
-            });
-          }
-          return isValid;
-        }
-      } else {
-        // Trim Box case
-        // If trim box list is empty, fetch it
-        if (trimBoxList.length === 0) {
-          const success = await fetchTrimBoxStatus(orderNumber);
-          if (!success) {
-            Toast.show({
-              type: 'error',
-              text1: 'Error',
-              text2:
-                trimBoxMessage ||
-                'Unable to fetch trim box status. Please try again.',
-            });
-          }
-          return success;
-        } else {
-          // Data is already available, validate it's not in error state
-          const isValid =
-            trimBoxStatus !== 'not-found' && trimBoxStatus !== 'error';
-          if (!isValid) {
-            Toast.show({
-              type: 'error',
-              text1: 'Error',
-              text2:
-                trimBoxMessage ||
-                'Unable to fetch trim box status. Please try again.',
-            });
-          }
-          return isValid;
-        }
-      }
-    }, [
-      entryType,
-      csvNumber,
-      orderNumber,
-      panelData,
-      panelStatus,
-      panelMessage,
-      trimBoxList,
-      trimBoxStatus,
-      trimBoxMessage,
-      fetchPanelStatus,
-      fetchTrimBoxStatus,
-    ]);
+  // ─── Scan Type button handler ─────────────────────────────────────────────
+  // Allows navigation when the base order exists, even if no scan history yet.
+  // Blocks only when the order genuinely does not exist.
 
   const handleScanTypePress = useCallback(async () => {
-    // Prevent multiple taps while loading
     if (scanTypeNavigationLoading) return;
+
+    const identifier = entryType === 'Panel' ? csvNumber : orderNumber;
+    if (!identifier.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please enter a valid identifier.',
+      });
+      return;
+    }
 
     setScanTypeNavigationLoading(true);
 
     try {
-      const isValid = await validateStatusBeforeNavigation();
-      if (!isValid) return;
+      let resolvedOrderExists = orderExists;
+      let resolvedPanelData = panelData;
+      let resolvedTrimBoxList = trimBoxList;
+      let resolvedShipmentData = shipmentDetailsData;
 
-      // If we reach here, status is available and valid
-      // Now navigate to ScanTypeScreen with the latest data
+      if (resolvedOrderExists === null) {
+        if (entryType === 'Panel') {
+          const res = await fetchPanelWithDetails(csvNumber);
+          resolvedOrderExists = res.orderExists;
+          resolvedPanelData = res.panelData;
+          resolvedShipmentData = res.shipmentData;
+        } else {
+          const res = await fetchTrimBoxWithDetails(orderNumber);
+          resolvedOrderExists = res.orderExists;
+          resolvedTrimBoxList = res.trimBoxList;
+        }
+      }
+
+      if (!resolvedOrderExists) return;
+
       skipNextFocusRefetchRef.current = true;
       navigation.navigate('ScanType', {
         entityType: entryType as 'Panel' | 'Trim Box',
         csv: entryType === 'Panel' ? csvNumber : '',
-        orderNumber: entryType === 'Trim Box' ? orderNumber : '',
-        panelCurrentStatus: panelData?.status ?? '',
-        panelLastScanType: panelData?.lastScanType ?? '',
-        trimBoxStatuses: trimBoxList.map(b => ({
+        orderNumber:
+          entryType === 'Panel'
+            ? resolvedShipmentData?.orderNumber ?? ''
+            : orderNumber,
+        panelCurrentStatus: resolvedPanelData?.status ?? '',
+        panelLastScanType: resolvedPanelData?.lastScanType ?? '',
+        trimBoxStatuses: resolvedTrimBoxList.map(b => ({
           boxNumber: b.boxNumber,
           status: b.status,
           lastScanType: b.lastScanType,
@@ -462,31 +579,53 @@ const ShippingManagementScreen: React.FC<{
     entryType,
     csvNumber,
     orderNumber,
+    orderExists,
+    shipmentDetailsData,
     panelData,
     trimBoxList,
     navigation,
     applyScanResult,
-    validateStatusBeforeNavigation,
+    fetchPanelWithDetails,
+    fetchTrimBoxWithDetails,
   ]);
 
-  // ─── View Shipping Details handler ───────────────────────────────────────
+  // ─── View Shipping Details button handler ─────────────────────────────────
 
   const handleViewShippingDetailsPress = useCallback(async () => {
-    // Prevent multiple taps while loading
     if (viewShippingDetailsLoading) return;
+
+    const identifier = entryType === 'Panel' ? csvNumber : orderNumber;
+    if (!identifier.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please enter a valid identifier.',
+      });
+      return;
+    }
 
     setViewShippingDetailsLoading(true);
 
     try {
-      const isValid = await validateStatusBeforeNavigation();
-      if (!isValid) return;
+      let resolvedOrderExists = orderExists;
+      let resolvedShipmentData = shipmentDetailsData;
 
-      // If we reach here, status is available and valid
-      // Now navigate to ShippingDetails with the latest data
-      const identifier = entryType === 'Panel' ? csvNumber : orderNumber;
+      if (resolvedOrderExists === null) {
+        if (entryType === 'Panel') {
+          const res = await fetchPanelWithDetails(csvNumber);
+          resolvedOrderExists = res.orderExists;
+          resolvedShipmentData = res.shipmentData;
+        } else {
+          const res = await fetchTrimBoxWithDetails(orderNumber);
+          resolvedOrderExists = res.orderExists;
+          resolvedShipmentData = res.shipmentData;
+        }
+      }
+
       navigation.navigate('ShippingDetails', {
         entityType: entryType === 'Panel' ? 'Panel' : 'Trim Box',
         identifier,
+        shipmentDetails: resolvedOrderExists ? resolvedShipmentData : null,
       });
     } finally {
       setViewShippingDetailsLoading(false);
@@ -496,8 +635,11 @@ const ShippingManagementScreen: React.FC<{
     entryType,
     csvNumber,
     orderNumber,
+    orderExists,
+    shipmentDetailsData,
     navigation,
-    validateStatusBeforeNavigation,
+    fetchPanelWithDetails,
+    fetchTrimBoxWithDetails,
   ]);
 
   // ─── Trim Box status card ─────────────────────────────────────────────────
@@ -538,6 +680,33 @@ const ShippingManagementScreen: React.FC<{
               <CustomText size={FontSize.smallText} color={COLORS.greyText}>
                 {trimBoxMessage}
               </CustomText>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    if (trimBoxStatus === 'new-entity') {
+      return (
+        <View style={styles.panelStatusCard}>
+          <View style={[styles.panelTopRow, { marginBottom: 0 }]}>
+            <Ionicons
+              style={styles.panelIconWrapper}
+              name="scan-outline"
+              size={wp(10)}
+              color={COLORS.primary}
+            />
+            <View style={styles.panelTextWrapper}>
+              <CustomText
+                size={FontSize.normalLargeText}
+                color={COLORS.primary}
+                weight="semibold"
+              >
+                New Trim Box — Ready for First Scan
+              </CustomText>
+              {/* <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+                {trimBoxMessage}
+              </CustomText> */}
             </View>
           </View>
         </View>
@@ -713,6 +882,33 @@ const ShippingManagementScreen: React.FC<{
       );
     }
 
+    if (panelStatus === 'new-entity') {
+      return (
+        <View style={styles.panelStatusCard}>
+          <View style={[styles.panelTopRow, { marginBottom: 0 }]}>
+            <Ionicons
+              style={styles.panelIconWrapper}
+              name="scan-outline"
+              size={wp(10)}
+              color={COLORS.primary}
+            />
+            <View style={styles.panelTextWrapper}>
+              <CustomText
+                size={FontSize.normalLargeText}
+                color={COLORS.primary}
+                weight="semibold"
+              >
+                New Panel — Ready for First Scan
+              </CustomText>
+              {/* <CustomText size={FontSize.smallText} color={COLORS.greyText}>
+                {panelMessage}
+              </CustomText> */}
+            </View>
+          </View>
+        </View>
+      );
+    }
+
     if (panelStatus === 'hold' && panelData) {
       return (
         <View style={styles.panelStatusCard}>
@@ -775,6 +971,8 @@ const ShippingManagementScreen: React.FC<{
 
   // ─── JSX ─────────────────────────────────────────────────────────────────
 
+  const scanTypeBlocked = orderExists === false;
+
   return (
     <View style={styles.root}>
       <Header
@@ -827,7 +1025,7 @@ const ShippingManagementScreen: React.FC<{
               rightIconName="barcode-outline"
               onRightPress={handleBarcodePress}
               returnKeyType="search"
-              onSubmitEditing={() => fetchPanelStatus(csvNumber)}
+              onSubmitEditing={() => fetchPanelWithDetails(csvNumber)}
             />
           )}
 
@@ -842,7 +1040,7 @@ const ShippingManagementScreen: React.FC<{
                 rightIconName="barcode-outline"
                 onRightPress={handleBarcodePress}
                 returnKeyType="search"
-                onSubmitEditing={() => fetchTrimBoxStatus(orderNumber)}
+                onSubmitEditing={() => fetchTrimBoxWithDetails(orderNumber)}
               />
             </>
           )}
@@ -861,10 +1059,11 @@ const ShippingManagementScreen: React.FC<{
           style={[
             styles.actionButton,
             styles.leftButton,
-            scanTypeNavigationLoading && { opacity: 0.6 },
+            (scanTypeNavigationLoading || scanTypeBlocked) &&
+              styles.disabledOpacity,
           ]}
           onPress={handleScanTypePress}
-          disabled={scanTypeNavigationLoading}
+          disabled={scanTypeNavigationLoading || scanTypeBlocked}
         >
           {scanTypeNavigationLoading ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
@@ -884,10 +1083,11 @@ const ShippingManagementScreen: React.FC<{
           style={[
             styles.actionButton,
             styles.primaryAction,
-            viewShippingDetailsLoading && { opacity: 0.6 },
+            (viewShippingDetailsLoading || scanTypeBlocked) &&
+              styles.disabledOpacity,
           ]}
           onPress={handleViewShippingDetailsPress}
-          disabled={viewShippingDetailsLoading}
+          disabled={viewShippingDetailsLoading || scanTypeBlocked}
         >
           {viewShippingDetailsLoading ? (
             <ActivityIndicator size="small" color={COLORS.white} />
@@ -1106,6 +1306,9 @@ const styles = StyleSheet.create({
     paddingVertical: wp(3),
     alignItems: 'center',
     backgroundColor: COLORS.primary,
+  },
+  disabledOpacity: {
+    opacity: 0.6,
   },
 });
 

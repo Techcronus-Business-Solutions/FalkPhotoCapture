@@ -1,6 +1,7 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { ShipmentBOL } from '../types/shipment';
+import type { ShippingDetailsResponseData } from '../types/shippingDetails';
 
 export interface ScanCompletedResult {
   entityType: 'Panel' | 'Trim Box';
@@ -34,6 +35,7 @@ export type RootStackParamList = {
   ShippingDetails: {
     entityType?: 'Panel' | 'Trim Box';
     identifier?: string;
+    shipmentDetails?: ShippingDetailsResponseData | null;
   };
   UploadImage: {
     shipmentId: string;

@@ -32,6 +32,11 @@ const SCAN_TYPES = [
 const toDropdownOptions = (items: string[]) =>
   items.map(item => ({ label: item, value: item }));
 
+const isBolForOrder = (bol: string, orderNumber: string): boolean => {
+  const escapedOrderNumber = orderNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escapedOrderNumber}-\\d+$`).test(bol);
+};
+
 interface ScanTypeScreenProps {
   navigation: ScanTypeNavigationProp;
   route: ScanTypeRouteProp;
@@ -41,7 +46,15 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { entityType, csv, orderNumber, panelCurrentStatus, panelLastScanType, trimBoxStatuses, onScanComplete } = route.params;
+  const {
+    entityType,
+    csv,
+    orderNumber,
+    panelCurrentStatus,
+    panelLastScanType,
+    trimBoxStatuses,
+    onScanComplete,
+  } = route.params;
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
   const { isConnected } = useNetworkStatus();
@@ -130,44 +143,85 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
     if (submitting) return;
 
     if (entityType === 'Trim Box' && !boxNumber.trim()) {
-      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a Box Number.' });
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please enter a Box Number.',
+      });
       return;
     }
-    if ((scanType === 'Load' || scanType === 'Move' || scanType === 'Release Hold') && !location.trim()) {
-      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a Location.' });
+    if (
+      (scanType === 'Load' ||
+        scanType === 'Move' ||
+        scanType === 'Release Hold') &&
+      !location.trim()
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please enter a Location.',
+      });
       return;
     }
     if (scanType === 'Ship' && !bol.trim()) {
-      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a BOL.' });
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please enter a BOL.',
+      });
+      return;
+    }
+    if (scanType === 'Ship' && !isBolForOrder(bol, orderNumber)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: `BOL must start with the Order Number (e.g. ${orderNumber}-1).`,
+      });
       return;
     }
     if (scanType === 'QA Hold') {
       if (!holdLocation) {
-        Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please select a Hold Location.' });
+        Toast.show({
+          type: 'error',
+          text1: 'Validation Error',
+          text2: 'Please select a Hold Location.',
+        });
         return;
       }
       if (!holdReason) {
-        Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please select a Hold Reason.' });
+        Toast.show({
+          type: 'error',
+          text1: 'Validation Error',
+          text2: 'Please select a Hold Reason.',
+        });
         return;
       }
     }
 
-    if (entityType === 'Panel' && panelCurrentStatus === 'QA Hold' && scanType !== 'Release Hold') {
+    if (
+      entityType === 'Panel' &&
+      panelCurrentStatus === 'QA Hold' &&
+      scanType !== 'Release Hold'
+    ) {
       Toast.show({
         type: 'error',
         text1: 'Validation Error',
-        text2: 'This panel is currently on QA Hold. Please select "Release Hold" as the Scan Type.',
+        text2:
+          'This panel is currently on QA Hold. Please select "Release Hold" as the Scan Type.',
       });
       return;
     }
 
     if (entityType === 'Trim Box') {
-      const matchedBox = trimBoxStatuses.find(b => b.boxNumber === Number(boxNumber));
+      const matchedBox = trimBoxStatuses.find(
+        b => b.boxNumber === Number(boxNumber),
+      );
       if (matchedBox?.status === 'QA Hold' && scanType !== 'Release Hold') {
         Toast.show({
           type: 'error',
           text1: 'Validation Error',
-          text2: 'This Trim Box is currently on QA Hold. Please select "Release Hold" as the Scan Type.',
+          text2:
+            'This Trim Box is currently on QA Hold. Please select "Release Hold" as the Scan Type.',
         });
         return;
       }
@@ -178,25 +232,33 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
       Toast.show({
         type: 'error',
         text1: 'Validation Error',
-        text2: 'This item has already been shipped and cannot be scanned with the selected scan type.',
+        text2:
+          'This item has already been shipped and cannot be scanned with the selected scan type.',
       });
       return;
     }
 
     if (entityType === 'Trim Box') {
-      const matchedBox = trimBoxStatuses.find(b => b.boxNumber === Number(boxNumber));
+      const matchedBox = trimBoxStatuses.find(
+        b => b.boxNumber === Number(boxNumber),
+      );
       if (matchedBox?.status === 'Shipped') {
         Toast.show({
           type: 'error',
           text1: 'Validation Error',
-          text2: 'This item has already been shipped and cannot be scanned with the selected scan type.',
+          text2:
+            'This item has already been shipped and cannot be scanned with the selected scan type.',
         });
         return;
       }
     }
 
     if (!isConnected) {
-      Toast.show({ type: 'error', text1: 'No Internet', text2: 'Please check your internet connection.' });
+      Toast.show({
+        type: 'error',
+        text1: 'No Internet',
+        text2: 'Please check your internet connection.',
+      });
       return;
     }
 
@@ -207,7 +269,12 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
         orderNumber: entityType === 'Trim Box' ? orderNumber : '',
         boxNumber: entityType === 'Trim Box' ? boxNumber : '0',
         scanType,
-        location: (scanType === 'Load' || scanType === 'Move' || scanType === 'Release Hold') ? location : '',
+        location:
+          scanType === 'Load' ||
+          scanType === 'Move' ||
+          scanType === 'Release Hold'
+            ? location
+            : '',
         bol: scanType === 'Ship' ? bol : '',
         holdLocation: scanType === 'QA Hold' ? holdLocation : '',
         holdReason: scanType === 'QA Hold' ? holdReason : '',
@@ -215,10 +282,16 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
         entityType,
       };
 
-      console.log('[ScanTypeScreen] Submit request:', { url: API_ROUTES.SCAN_SHIPMENT, body });
+      console.log('[ScanTypeScreen] Submit request:', {
+        url: API_ROUTES.SCAN_SHIPMENT,
+        body,
+      });
       const res = await apiClient.post(API_ROUTES.SCAN_SHIPMENT, body);
       const json = await res.json();
-      console.log('[ScanTypeScreen] Submit response:', { status: res.status, json });
+      console.log('[ScanTypeScreen] Submit response:', {
+        status: res.status,
+        json,
+      });
 
       if (json.success) {
         const result: ScanCompletedResult = {
@@ -227,21 +300,56 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
           orderNumber,
           boxNumber,
           scanType,
-          location: (scanType === 'Load' || scanType === 'Move' || scanType === 'Release Hold') ? location : '',
+          location:
+            scanType === 'Load' ||
+            scanType === 'Move' ||
+            scanType === 'Release Hold'
+              ? location
+              : '',
           holdLocation: scanType === 'QA Hold' ? holdLocation : '',
         };
         onScanComplete?.(result);
-        Toast.show({ type: 'success', text1: 'Success', text2: json.message || 'Scan submitted successfully.' });
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: json.message || 'Scan submitted successfully.',
+        });
         navigation.goBack();
       } else {
-        Toast.show({ type: 'error', text1: 'Error', text2: json.message || 'Failed to submit scan.' });
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: json.message || 'Failed to submit scan.',
+        });
       }
     } catch {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to submit scan. Please try again.' });
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to submit scan. Please try again.',
+      });
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, entityType, csv, orderNumber, panelCurrentStatus, panelLastScanType, trimBoxStatuses, boxNumber, scanType, location, bol, holdLocation, holdReason, holdNotes, isConnected, navigation, onScanComplete]);
+  }, [
+    submitting,
+    entityType,
+    csv,
+    orderNumber,
+    panelCurrentStatus,
+    panelLastScanType,
+    trimBoxStatuses,
+    boxNumber,
+    scanType,
+    location,
+    bol,
+    holdLocation,
+    holdReason,
+    holdNotes,
+    isConnected,
+    navigation,
+    onScanComplete,
+  ]);
 
   const renderDynamicFields = () => {
     if (scanType === 'Ship') {
@@ -308,7 +416,9 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   return (
     <View style={styles.root}>
       <Header
-        title={entityType === 'Panel' ? `CSV - ${csv}` : `Order - ${orderNumber}`}
+        title={
+          entityType === 'Panel' ? `CSV - ${csv}` : `Order - ${orderNumber}`
+        }
         leftIconName="arrow-back"
         onLeftPress={handleBack}
       />
