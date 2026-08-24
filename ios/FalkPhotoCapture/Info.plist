@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>FalkPhotoCapture</string>
+	<string>Falk Logistics Scanner</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -44,11 +44,11 @@
     </dict>
 </dict>
 	<key>NSCameraUsageDescription</key>
-	<string>FalkPhotoCapture needs camera access to capture shipment photos.</string>
+	<string>Falk Logistics Scanner needs camera access to capture shipment photos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>FalkPhotoCapture needs permission to save photos.</string>
+	<string>Falk Logistics Scanner needs permission to save photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>FalkPhotoCapture needs photo library access to attach shipment photos.</string>
+	<string>Falk Logistics Scanner needs photo library access to attach shipment photos.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>
