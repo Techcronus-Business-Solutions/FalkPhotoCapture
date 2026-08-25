@@ -23,18 +23,18 @@ export interface ShipmentBOLImage {
 }
 
 export interface ShipmentBOLDetails {
-  orderNumber: string;
-  csv: string;
-  customer: string;
-  shipToAddress: string;
+  orderNumber?: string | null;
+  csv?: string | null;
+  customer?: string | null;
+  shipToAddress?: string | null;
 }
 
 export interface ShipmentBOL {
   bol: string;
   csv: string;
   createdDate: string;
-  modified:String;
-  details: ShipmentBOLDetails;
+  modified: String;
+  details?: ShipmentBOLDetails | null;
   panels: string[];
   trimBoxes: number[];
   images: ShipmentBOLImage[];

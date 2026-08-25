@@ -71,6 +71,10 @@ const UploadImageScreen: React.FC<{
     () => shipments.find(item => item.id === shipmentId),
     [shipments, shipmentId],
   );
+  const orderNumber = useMemo(() => {
+    const value = shipment?.salesOrderNo;
+    return typeof value === 'string' ? value.trim() : '';
+  }, [shipment?.salesOrderNo]);
   const [serverPhotos, setServerPhotos] = useState<PhotoItem[]>([]);
   const { takePhoto, pickFromGallery } = useImagePicker();
   const pendingUploadEntries = usePendingUploadsStore(
@@ -231,6 +235,15 @@ const UploadImageScreen: React.FC<{
   const handleUpload = useCallback(async () => {
     if (uploadingRef.current) return;
 
+    if (!orderNumber) {
+      Toast.show({
+        type: 'error',
+        text1: 'Order Number Missing',
+        text2: 'This BOL has no order number. Please try again later.',
+      });
+      return;
+    }
+
     if (!photos.length && !(pendingUploads?.length ?? 0)) {
       Toast.show({
         type: 'error',
@@ -248,8 +261,6 @@ const UploadImageScreen: React.FC<{
       });
       return;
     }
-
-    const orderNumber = shipment?.salesOrderNo ?? '';
 
     const saveOffline = async () => {
       await uploadService.uploadPhotosOffline(
@@ -314,7 +325,7 @@ const UploadImageScreen: React.FC<{
   }, [
     photos,
     pendingUploads,
-    shipment,
+    orderNumber,
     shipmentId,
     bolNumber,
     isConnected,

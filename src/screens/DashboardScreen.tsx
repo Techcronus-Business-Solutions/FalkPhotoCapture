@@ -93,7 +93,7 @@ const DashboardScreen: React.FC<{ navigation: DashboardNavigationProp }> = ({
 
   const handleReadCode = useCallback(
     (event: { nativeEvent: { codeStringValue: string } }) => {
-      const codeStringValue = event.nativeEvent.codeStringValue;
+      const codeStringValue = event.nativeEvent.codeStringValue?.trim();
       if (!codeStringValue) {
         return;
       }

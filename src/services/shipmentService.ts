@@ -27,7 +27,7 @@ const formatShipmentDate = (rawDate: unknown): string => {
 };
 
 export const mapBolToShipment = (bol: ShipmentBOL): Shipment => {
-  const sharePointLinks: ShipmentSharePointLink[] = bol.images.map(
+  const sharePointLinks: ShipmentSharePointLink[] = (bol.images ?? []).map(
     (img, idx) => ({
       attachmentNo: idx + 1,
       url1: img.imageUrl ?? '',

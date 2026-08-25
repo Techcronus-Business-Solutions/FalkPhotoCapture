@@ -62,15 +62,16 @@ const DeliveryShippingDetailsScreen: React.FC<{
   const { shipmentBol } = route.params;
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
+  const details = shipmentBol.details;
 
   const items = useMemo<ShipmentItem[]>(
     () => [
-      ...shipmentBol.panels.map(panel => ({
+      ...(shipmentBol.panels ?? []).map(panel => ({
         id: panel,
         type: 'Panel' as ItemType,
         name: `Panel ${panel}`,
       })),
-      ...shipmentBol.trimBoxes.map(box => ({
+      ...(shipmentBol.trimBoxes ?? []).map(box => ({
         id: String(box),
         type: 'TrimBox' as ItemType,
         name: `Trim Box ${box}`,
@@ -83,7 +84,7 @@ const DeliveryShippingDetailsScreen: React.FC<{
     navigation.navigate('UploadImage', {
       shipmentId: shipmentBol.bol,
       bolNumber: shipmentBol.bol,
-      images: shipmentBol.images,
+      images: shipmentBol.images ?? [],
     });
   }, [navigation, shipmentBol]);
 
@@ -105,11 +106,11 @@ const DeliveryShippingDetailsScreen: React.FC<{
         {/* ── Info fields ── */}
         <InfoField
           label="Customer Name"
-          value={displayValue(shipmentBol.details.customer) as string}
+          value={displayValue(details?.customer) as string}
         />
         <InfoField
           label="Customer Address"
-          value={displayValue(shipmentBol.details.shipToAddress) as string}
+          value={displayValue(details?.shipToAddress) as string}
         />
         <InfoField
           label="BOL Number"
@@ -117,7 +118,7 @@ const DeliveryShippingDetailsScreen: React.FC<{
         />
         <InfoField
           label="Order Number"
-          value={displayValue(shipmentBol.details.orderNumber) as string}
+          value={displayValue(details?.orderNumber) as string}
         />
 
         {/* ── Item List card ── */}

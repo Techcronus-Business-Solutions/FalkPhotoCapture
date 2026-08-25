@@ -48,7 +48,11 @@ export type RootStackParamList = {
     orderNumber: string;
     panelCurrentStatus: string;
     panelLastScanType: string;
-    trimBoxStatuses: { boxNumber: number; status: string; lastScanType?: string }[];
+    trimBoxStatuses: {
+      boxNumber: number;
+      status: string;
+      lastScanType?: string;
+    }[];
     onScanComplete?: (result: ScanCompletedResult) => void;
   };
   OrderFulfillment: { orderNumber: string };
@@ -96,10 +100,7 @@ export type ScanTypeNavigationProp = NativeStackNavigationProp<
   'ScanType'
 >;
 
-export type UploadImageRouteProp = RouteProp<
-  RootStackParamList,
-  'UploadImage'
->;
+export type UploadImageRouteProp = RouteProp<RootStackParamList, 'UploadImage'>;
 export type ScanTypeRouteProp = RouteProp<RootStackParamList, 'ScanType'>;
 export type OrderFulfillmentNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
