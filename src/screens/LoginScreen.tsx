@@ -21,6 +21,9 @@ import { FontSize } from '../assets/constants';
 import AppLogo from '../assets/images/logo-blue.svg';
 import CustomInput2 from '../components/CustomInput2';
 import type { LoginNavigationProp } from '../navigation/types';
+import DeviceInfo from 'react-native-device-info';
+
+const APP_VERSION = DeviceInfo.getVersion();
 
 const LoginScreen: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -62,7 +65,6 @@ const LoginScreen: React.FC = () => {
         text2: message || 'You are now logged in.',
       });
       navigation.replace('ManagerDashboard');
-
     } catch (err: unknown) {
       Toast.show({
         type: 'error',
@@ -147,7 +149,7 @@ const LoginScreen: React.FC = () => {
             color={COLORS.primary}
             style={styles.version}
           >
-            Version. 1.0
+            Version. {APP_VERSION}
           </CustomText>
         </ScrollView>
       </KeyboardAvoidingView>
