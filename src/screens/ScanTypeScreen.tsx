@@ -16,10 +16,9 @@ import type {
   ScanTypeNavigationProp,
   ScanTypeRouteProp,
   ScanCompletedResult,
+  ScanTypeValue,
 } from '../navigation/types';
 import CustomButton from '../components/CustomButton';
-
-type ScanTypeValue = 'Load' | 'Move' | 'Ship' | 'QA Hold' | 'Release Hold';
 
 const SCAN_TYPES = [
   { label: 'Load', value: 'Load' },
@@ -48,6 +47,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
 }) => {
   const {
     entityType,
+    defaultScanType,
     csv,
     orderNumber,
     panelCurrentStatus,
@@ -59,7 +59,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
   const handleBack = useBackHandler(navigation);
   const { isConnected } = useNetworkStatus();
 
-  const [scanType, setScanType] = useState<ScanTypeValue>('Load');
+  const [scanType, setScanType] = useState<ScanTypeValue>(defaultScanType);
   const [boxNumber, setBoxNumber] = useState('');
   const [location, setLocation] = useState('');
   const [bol, setBol] = useState('');
@@ -193,6 +193,14 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
           type: 'error',
           text1: 'Validation Error',
           text2: 'Please select a Hold Reason.',
+        });
+        return;
+      }
+      if (!holdNotes.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Validation Error',
+          text2: 'Please enter Hold Notes.',
         });
         return;
       }

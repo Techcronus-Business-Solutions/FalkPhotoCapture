@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import ManagerDashboard from '../screens/ManagerDashboard';
+import DriverRoleSelectionScreen from '../screens/DriverRoleSelectionScreen';
 import UploadImageScreen from '../screens/UploadImageScreen';
 import ShippingManagementScreen from '../screens/ShippingManagementScreen';
 import ShippingDetailsScreen from '../screens/ShippingDetailsScreen';
@@ -39,6 +40,10 @@ const AppNavigator: React.FC = () => {
               component={ManagerDashboard}
             />
             <Stack.Screen
+              name="DriverRoleSelection"
+              component={DriverRoleSelectionScreen}
+            />
+            <Stack.Screen
               name="ShippingManagement"
               component={ShippingManagementScreen}
             />
@@ -46,10 +51,7 @@ const AppNavigator: React.FC = () => {
               name="ShippingDetails"
               component={ShippingDetailsScreen}
             />
-            <Stack.Screen
-              name="UploadImage"
-              component={UploadImageScreen}
-            />
+            <Stack.Screen name="UploadImage" component={UploadImageScreen} />
             <Stack.Screen name="ScanType" component={ScanTypeScreen} />
             <Stack.Screen
               name="OrderFulfillment"
@@ -71,10 +73,7 @@ const AppNavigator: React.FC = () => {
               name="BendexBoxAllocation"
               component={BendexBoxAllocationScreen}
             />
-            <Stack.Screen
-              name="BoxContents"
-              component={BoxContentsScreen}
-            />
+            <Stack.Screen name="BoxContents" component={BoxContentsScreen} />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />

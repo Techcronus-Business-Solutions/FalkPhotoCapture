@@ -23,11 +23,31 @@ export interface PanelLocationItem {
   lastScanType: string;
 }
 
+export type DriverRole =
+  | 'Production Combi Driver'
+  | 'Trims Combi Driver'
+  | 'Logistic Combi Driver';
+
+export type EntityType = 'Panel' | 'Trim Box';
+export type ScanTypeValue =
+  | 'Load'
+  | 'Move'
+  | 'Ship'
+  | 'QA Hold'
+  | 'Release Hold';
+
+export interface DriverRoleConfig {
+  driverRole: DriverRole;
+  defaultEntityType: EntityType;
+  defaultScanType: ScanTypeValue;
+}
+
 export type RootStackParamList = {
   Login: undefined;
   Dashboard: undefined;
   ManagerDashboard: undefined;
-  ShippingManagement: undefined;
+  DriverRoleSelection: undefined;
+  ShippingManagement: DriverRoleConfig;
 
   DeliveryShippingDetails: {
     shipmentBol: ShipmentBOL;
@@ -43,7 +63,9 @@ export type RootStackParamList = {
     images: import('../types/shipment').ShipmentBOLImage[];
   };
   ScanType: {
-    entityType: 'Panel' | 'Trim Box';
+    entityType: EntityType;
+    driverRole: DriverRole;
+    defaultScanType: ScanTypeValue;
     csv: string;
     orderNumber: string;
     panelCurrentStatus: string;
@@ -79,11 +101,19 @@ export type ManagerDashboardNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'ManagerDashboard'
 >;
+export type DriverRoleSelectionNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'DriverRoleSelection'
+>;
 export type UploadImageNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'UploadImage'
 >;
 export type ShippingManagementNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'ShippingManagement'
+>;
+export type ShippingManagementRouteProp = RouteProp<
   RootStackParamList,
   'ShippingManagement'
 >;

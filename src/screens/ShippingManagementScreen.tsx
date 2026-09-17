@@ -27,6 +27,7 @@ import { getShipmentDetailsRequestConfig } from '../utils/shipmentDetails';
 import type { ShippingDetailsResponseData } from '../types/shippingDetails';
 import type {
   ShippingManagementNavigationProp,
+  ShippingManagementRouteProp,
   ScanCompletedResult,
 } from '../navigation/types';
 
@@ -118,12 +119,13 @@ const ENTRY_TYPES = [
 
 const ShippingManagementScreen: React.FC<{
   navigation: ShippingManagementNavigationProp;
-}> = ({ navigation }) => {
+  route: ShippingManagementRouteProp;
+}> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
   const { isConnected } = useNetworkStatus();
 
-  const [entryType, setEntryType] = useState('Panel');
+  const [entryType, setEntryType] = useState(route.params.defaultEntityType);
   const [csvNumber, setCsvNumber] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
   const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
@@ -557,6 +559,8 @@ const ShippingManagementScreen: React.FC<{
       skipNextFocusRefetchRef.current = true;
       navigation.navigate('ScanType', {
         entityType: entryType as 'Panel' | 'Trim Box',
+        driverRole: route.params.driverRole,
+        defaultScanType: route.params.defaultScanType,
         csv: entryType === 'Panel' ? csvNumber : '',
         orderNumber:
           entryType === 'Panel'
@@ -584,6 +588,8 @@ const ShippingManagementScreen: React.FC<{
     panelData,
     trimBoxList,
     navigation,
+    route.params.defaultScanType,
+    route.params.driverRole,
     applyScanResult,
     fetchPanelWithDetails,
     fetchTrimBoxWithDetails,
@@ -1013,7 +1019,7 @@ const ShippingManagementScreen: React.FC<{
             placeholder="Panel"
             options={ENTRY_TYPES}
             value={entryType}
-            onValueChange={setEntryType}
+            onValueChange={value => setEntryType(value as 'Panel' | 'Trim Box')}
           />
 
           {entryType === 'Panel' && (
