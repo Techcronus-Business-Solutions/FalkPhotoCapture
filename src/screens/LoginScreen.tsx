@@ -64,7 +64,7 @@ const LoginScreen: React.FC = () => {
         text1: 'Login Successful',
         text2: message || 'You are now logged in.',
       });
-      navigation.replace('ManagerDashboard');
+      navigation.replace('DriverRoleSelection');
     } catch (err: unknown) {
       Toast.show({
         type: 'error',

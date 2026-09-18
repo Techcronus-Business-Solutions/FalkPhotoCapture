@@ -3,7 +3,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
 import DashboardScreen from '../screens/DashboardScreen';
-import ManagerDashboard from '../screens/ManagerDashboard';
 import DriverRoleSelectionScreen from '../screens/DriverRoleSelectionScreen';
 import UploadImageScreen from '../screens/UploadImageScreen';
 import ShippingManagementScreen from '../screens/ShippingManagementScreen';
@@ -26,7 +25,7 @@ const AppNavigator: React.FC = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName={isLoggedIn ? 'ManagerDashboard' : 'Login'}
+        initialRouteName={isLoggedIn ? 'DriverRoleSelection' : 'Login'}
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
@@ -35,10 +34,10 @@ const AppNavigator: React.FC = () => {
         {isLoggedIn ? (
           <>
             <Stack.Screen name="Dashboard" component={DashboardScreen} />
-            <Stack.Screen
+            {/* <Stack.Screen
               name="ManagerDashboard"
               component={ManagerDashboard}
-            />
+            /> */}
             <Stack.Screen
               name="DriverRoleSelection"
               component={DriverRoleSelectionScreen}

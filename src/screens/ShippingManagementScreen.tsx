@@ -13,6 +13,7 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import { Camera } from 'react-native-camera-kit';
 import Header from '../components/Header';
 import CustomText from '../components/CustomText';
+import CustomButton from '../components/CustomButton';
 import CustomInput2 from '../components/CustomInput2';
 import CustomDropdown from '../components/CustomDropdown';
 import { COLORS, FontSize } from '../assets/constants';
@@ -124,6 +125,7 @@ const ShippingManagementScreen: React.FC<{
   const insets = useSafeAreaInsets();
   const handleBack = useBackHandler(navigation);
   const { isConnected } = useNetworkStatus();
+  const isLogisticDriver = route.params.driverRole === 'Logistic Combi Driver';
 
   const [entryType, setEntryType] = useState(route.params.defaultEntityType);
   const [csvNumber, setCsvNumber] = useState('');
@@ -185,7 +187,6 @@ const ShippingManagementScreen: React.FC<{
         panelData: null,
         panelStatus: null,
       };
-
       if (!csv.trim()) return empty;
       if (panelFetchInFlightRef.current) return empty;
 
@@ -1060,53 +1061,63 @@ const ShippingManagementScreen: React.FC<{
       <View
         style={[styles.bottomBar, { paddingBottom: insets.bottom + wp(2) }]}
       >
-        <TouchableOpacity
-          activeOpacity={0.8}
-          style={[
-            styles.actionButton,
-            styles.leftButton,
-            (scanTypeNavigationLoading || scanTypeBlocked) &&
-              styles.disabledOpacity,
-          ]}
-          onPress={handleScanTypePress}
-          disabled={scanTypeNavigationLoading || scanTypeBlocked}
-        >
-          {scanTypeNavigationLoading ? (
-            <ActivityIndicator size="small" color={COLORS.primary} />
-          ) : (
-            <CustomText
-              size={FontSize.normalText}
-              color={COLORS.primary}
-              weight="semibold"
-            >
-              Scan Type
-            </CustomText>
-          )}
-        </TouchableOpacity>
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[
+              styles.actionButton,
+              styles.leftButton,
+              (scanTypeNavigationLoading || scanTypeBlocked) &&
+                styles.disabledOpacity,
+            ]}
+            onPress={handleScanTypePress}
+            disabled={scanTypeNavigationLoading || scanTypeBlocked}
+          >
+            {scanTypeNavigationLoading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <CustomText
+                size={FontSize.normalText}
+                color={COLORS.primary}
+                weight="semibold"
+              >
+                Scan Type
+              </CustomText>
+            )}
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          activeOpacity={0.8}
-          style={[
-            styles.actionButton,
-            styles.primaryAction,
-            (viewShippingDetailsLoading || scanTypeBlocked) &&
-              styles.disabledOpacity,
-          ]}
-          onPress={handleViewShippingDetailsPress}
-          disabled={viewShippingDetailsLoading || scanTypeBlocked}
-        >
-          {viewShippingDetailsLoading ? (
-            <ActivityIndicator size="small" color={COLORS.white} />
-          ) : (
-            <CustomText
-              size={FontSize.normalText}
-              color={COLORS.white}
-              weight="semibold"
-            >
-              View Shipping Details
-            </CustomText>
-          )}
-        </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[
+              styles.actionButton,
+              styles.primaryAction,
+              (viewShippingDetailsLoading || scanTypeBlocked) &&
+                styles.disabledOpacity,
+            ]}
+            onPress={handleViewShippingDetailsPress}
+            disabled={viewShippingDetailsLoading || scanTypeBlocked}
+          >
+            {viewShippingDetailsLoading ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <CustomText
+                size={FontSize.normalText}
+                color={COLORS.white}
+                weight="semibold"
+              >
+                View Shipping Details
+              </CustomText>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {isLogisticDriver && (
+          <CustomButton
+            title="UPLOAD IMAGE"
+            onPress={() => navigation.navigate('Dashboard')}
+            style={styles.uploadImageButton}
+          />
+        )}
       </View>
 
       {scannerVisible && (
@@ -1272,6 +1283,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     paddingHorizontal: wp(4),
     paddingTop: wp(3),
+  },
+  uploadImageButton: {
+    height: wp(12),
+    borderRadius: wp(2),
+    marginTop: wp(2),
+  },
+  actionRow: {
     flexDirection: 'row',
   },
   actionButton: {
