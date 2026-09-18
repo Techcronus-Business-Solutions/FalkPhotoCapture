@@ -30,6 +30,7 @@ import type {
   ShippingManagementNavigationProp,
   ShippingManagementRouteProp,
   ScanCompletedResult,
+  BoxDetailItem,
 } from '../navigation/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -114,6 +115,12 @@ const getBoxLocation = (box: TrimBox): string =>
 const ENTRY_TYPES = [
   { label: 'Panel', value: 'Panel' },
   { label: 'Trim Box', value: 'Trim Box' },
+];
+
+const DUMMY_BOX_DETAILS: BoxDetailItem[] = [
+  { boxName: 'Box 1', itemCount: 2 },
+  { boxName: 'Box 2', itemCount: 5 },
+  { boxName: 'Box 3', itemCount: 8 },
 ];
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
@@ -669,7 +676,7 @@ const ShippingManagementScreen: React.FC<{
     if (trimBoxStatus === 'not-found' || trimBoxStatus === 'error') {
       return (
         <View style={styles.panelStatusCard}>
-          <View style={[styles.panelTopRow, { marginBottom: 0 }]}>
+          <View style={styles.panelTopRow}>
             <Ionicons
               style={styles.panelIconWrapper}
               name="close-circle"
@@ -696,7 +703,7 @@ const ShippingManagementScreen: React.FC<{
     if (trimBoxStatus === 'new-entity') {
       return (
         <View style={styles.panelStatusCard}>
-          <View style={[styles.panelTopRow, { marginBottom: 0 }]}>
+          <View style={styles.panelTopRow}>
             <Ionicons
               style={styles.panelIconWrapper}
               name="scan-outline"
@@ -865,7 +872,7 @@ const ShippingManagementScreen: React.FC<{
     if (panelStatus === 'not-found' || panelStatus === 'error') {
       return (
         <View style={styles.panelStatusCard}>
-          <View style={[styles.panelTopRow, { marginBottom: 0 }]}>
+          <View style={styles.panelTopRow}>
             <Ionicons
               style={styles.panelIconWrapper}
               name="close-circle"
@@ -892,7 +899,7 @@ const ShippingManagementScreen: React.FC<{
     if (panelStatus === 'new-entity') {
       return (
         <View style={styles.panelStatusCard}>
-          <View style={[styles.panelTopRow, { marginBottom: 0 }]}>
+          <View style={styles.panelTopRow}>
             <Ionicons
               style={styles.panelIconWrapper}
               name="scan-outline"
@@ -1052,6 +1059,27 @@ const ShippingManagementScreen: React.FC<{
             </>
           )}
         </View>
+
+        {entryType === 'Trim Box' && orderExists === true && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.addNewBoxButton}
+            onPress={() =>
+              navigation.navigate('BoxDetail', {
+                orderNumber,
+                boxes: DUMMY_BOX_DETAILS,
+              })
+            }
+          >
+            <CustomText
+              size={FontSize.normalText}
+              color={COLORS.white}
+              weight="semibold"
+            >
+              Box Detail
+            </CustomText>
+          </TouchableOpacity>
+        )}
 
         {entryType === 'Panel'
           ? renderPanelStatusCard()
@@ -1291,6 +1319,15 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
+  },
+  addNewBoxButton: {
+    width: '100%',
+    height: wp(10),
+    borderRadius: wp(2),
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    marginBottom: wp(4),
   },
   actionButton: {
     flex: 1,

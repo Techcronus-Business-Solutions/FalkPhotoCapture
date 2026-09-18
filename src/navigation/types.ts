@@ -13,6 +13,18 @@ export interface ScanCompletedResult {
   holdLocation: string;
 }
 
+export interface BoxDetailItem {
+  boxName: string;
+  itemCount: number;
+}
+
+export interface AddBoxItem {
+  id: string;
+  name: string;
+  description: string;
+  quantity: number;
+}
+
 export interface PanelLocationItem {
   csv: string;
   status: string;
@@ -86,6 +98,14 @@ export type RootStackParamList = {
   BendexBoxAllocation: undefined;
   BoxContents: {
     boxNumber: string;
+  };
+  BoxDetail: {
+    orderNumber: string;
+    boxes: BoxDetailItem[];
+  };
+  AddBox: {
+    orderNumber: string;
+    boxes?: BoxDetailItem[];
   };
 };
 
@@ -161,6 +181,16 @@ export type BoxContentsNavigationProp = NativeStackNavigationProp<
   'BoxContents'
 >;
 export type BoxContentsRouteProp = RouteProp<RootStackParamList, 'BoxContents'>;
+export type BoxDetailNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'BoxDetail'
+>;
+export type BoxDetailRouteProp = RouteProp<RootStackParamList, 'BoxDetail'>;
+export type AddBoxNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'AddBox'
+>;
+export type AddBoxRouteProp = RouteProp<RootStackParamList, 'AddBox'>;
 export type DeliveryShippingDetailsNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'DeliveryShippingDetails'
