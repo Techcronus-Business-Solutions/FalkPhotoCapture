@@ -14,8 +14,10 @@ export interface ScanCompletedResult {
 }
 
 export interface BoxDetailItem {
+  boxNumber: number;
   boxName: string;
   itemCount: number;
+  items: AddBoxItem[];
 }
 
 export interface AddBoxItem {
@@ -23,6 +25,13 @@ export interface AddBoxItem {
   name: string;
   description: string;
   quantity: number;
+}
+
+export interface AvailableItem {
+  id: string;
+  name: string;
+  quantityLabel: string;
+  description: string;
 }
 
 export interface PanelLocationItem {
@@ -106,6 +115,10 @@ export type RootStackParamList = {
   AddBox: {
     orderNumber: string;
     boxes?: BoxDetailItem[];
+  };
+  EditBox: {
+    orderNumber: string;
+    box: BoxDetailItem;
   };
 };
 
@@ -191,6 +204,11 @@ export type AddBoxNavigationProp = NativeStackNavigationProp<
   'AddBox'
 >;
 export type AddBoxRouteProp = RouteProp<RootStackParamList, 'AddBox'>;
+export type EditBoxNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'EditBox'
+>;
+export type EditBoxRouteProp = RouteProp<RootStackParamList, 'EditBox'>;
 export type DeliveryShippingDetailsNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'DeliveryShippingDetails'

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import Header from '../components/Header';
 import CustomButton from '../components/CustomButton';
@@ -29,7 +29,11 @@ const BoxDetailScreen: React.FC<{
       >
         <View style={styles.orderCard}>
           <View style={styles.orderDetail}>
-            <CustomText size={FontSize.smallText} color={COLORS.greyText} weight="regular">
+            <CustomText
+              size={FontSize.smallText}
+              color={COLORS.greyText}
+              weight="regular"
+            >
               Order Number
             </CustomText>
             <CustomText
@@ -41,7 +45,11 @@ const BoxDetailScreen: React.FC<{
             </CustomText>
           </View>
           <View style={styles.entityDetail}>
-            <CustomText size={FontSize.smallText} color={COLORS.greyText} weight="regular">
+            <CustomText
+              size={FontSize.smallText}
+              color={COLORS.greyText}
+              weight="regular"
+            >
               Entity Type
             </CustomText>
             <CustomText
@@ -75,9 +83,13 @@ const BoxDetailScreen: React.FC<{
           </View>
 
           {boxes.map((box, index) => (
-            <View
+            <TouchableOpacity
               key={`${box.boxName}-${index}`}
               style={[styles.boxRow, index > 0 && styles.boxRowBorder]}
+              activeOpacity={0.8}
+              onPress={() =>
+                navigation.navigate('EditBox', { orderNumber, box })
+              }
             >
               <Ionicons
                 name="cube-outline"
@@ -106,7 +118,7 @@ const BoxDetailScreen: React.FC<{
                 size={wp(6)}
                 color={COLORS.primary}
               />
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       </ScrollView>

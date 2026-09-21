@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from '../components/Header';
 import CustomButton from '../components/CustomButton';
-import CustomInput2 from '../components/CustomInput2';
 import CustomText from '../components/CustomText';
 import DeleteItemModal from '../components/DeleteItemModal';
 import AvailableItemsModal from '../components/AvailableItemsModal';
@@ -16,35 +14,19 @@ import { wp } from '../utils/responsive';
 import { toDigitsOnly } from '../utils/input';
 import useBackHandler from '../hooks/useBackHandler';
 import type {
-  AddBoxNavigationProp,
-  AddBoxRouteProp,
   AddBoxItem,
+  EditBoxNavigationProp,
+  EditBoxRouteProp,
   AvailableItem,
 } from '../navigation/types';
 
-const DUMMY_ITEMS: AddBoxItem[] = [
-  {
-    id: '1',
-    name: 'Parapet Trim 12.5 (Qty - 27)',
-    description: 'PVDF - Slate Gray-6,172.2 mm × 151.2',
-    quantity: 15,
-  },
-  {
-    id: '2',
-    name: 'Parapet Trim 12.5 (Qty - 27)',
-    description: 'PVDF - Slate Gray-6,172.2 mm × 151.2',
-    quantity: 15,
-  },
-];
-
-const AddBoxScreen: React.FC<{
-  navigation: AddBoxNavigationProp;
-  route: AddBoxRouteProp;
+const EditBoxScreen: React.FC<{
+  navigation: EditBoxNavigationProp;
+  route: EditBoxRouteProp;
 }> = ({ navigation, route }) => {
-  const { orderNumber } = route.params;
+  const { orderNumber, box } = route.params;
   const insets = useSafeAreaInsets();
-  const [boxNumber, setBoxNumber] = useState('');
-  const [items, setItems] = useState<AddBoxItem[]>(DUMMY_ITEMS);
+  const [items, setItems] = useState<AddBoxItem[]>(box.items);
   const [editItem, setEditItem] = useState<AddBoxItem | null>(null);
   const [deleteItem, setDeleteItem] = useState<AddBoxItem | null>(null);
   const [editQuantity, setEditQuantity] = useState('');
@@ -97,11 +79,6 @@ const AddBoxScreen: React.FC<{
       !addQuantity.trim() ||
       Number(addQuantity) <= 0
     ) {
-      Toast.show({
-        type: 'error',
-        text1: 'Validation Error',
-        text2: 'Please enter a valid quantity.',
-      });
       return;
     }
 
@@ -117,26 +94,17 @@ const AddBoxScreen: React.FC<{
     setSelectedAvailableItem(null);
   };
 
-  const handleSave = () => {
-    if (!boxNumber.trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Validation Error',
-        text2: 'Please enter a box number.',
-      });
-      return;
-    }
-
-    console.log('Box ready to save:', {
+  const handleUpdate = () => {
+    console.log('Box ready to update:', {
+      boxNumber: box.boxNumber,
       orderNumber,
-      boxNumber: boxNumber.trim(),
       items,
     });
   };
 
   return (
     <View style={styles.root}>
-      <Header title="Add Box" onLeftPress={handleBack} />
+      <Header title="Edit Box" onLeftPress={handleBack} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -159,14 +127,6 @@ const AddBoxScreen: React.FC<{
           </CustomText>
         </View>
 
-        <CustomInput2
-          label="Box Number"
-          value={boxNumber}
-          onChangeText={value => setBoxNumber(toDigitsOnly(value))}
-          keyboardType="number-pad"
-          returnKeyType="done"
-        />
-
         <CustomButton
           title="Add New Item"
           onPress={() => setShowAvailableItems(true)}
@@ -180,7 +140,7 @@ const AddBoxScreen: React.FC<{
               color={COLORS.primary}
               weight="bold"
             >
-              Item In Box
+              {`Item in Box- ${box.boxNumber}`}
             </CustomText>
             <View style={styles.countBadge}>
               <CustomText
@@ -188,7 +148,7 @@ const AddBoxScreen: React.FC<{
                 color={COLORS.white}
                 weight="bold"
               >
-                {`${items.length} Items`}
+                {`${items.length} Item`}
               </CustomText>
             </View>
           </View>
@@ -248,7 +208,7 @@ const AddBoxScreen: React.FC<{
       <View
         style={[styles.bottomBar, { paddingBottom: insets.bottom + wp(3) }]}
       >
-        <CustomButton title="Save" onPress={handleSave} />
+        <CustomButton title="Update" onPress={handleUpdate} />
       </View>
 
       <ItemQuantityModal
@@ -367,4 +327,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddBoxScreen;
+export default EditBoxScreen;

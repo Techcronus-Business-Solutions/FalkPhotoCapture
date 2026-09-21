@@ -16,6 +16,7 @@ import BendexBoxAllocationScreen from '../screens/BendexBoxAllocationScreen';
 import BoxContentsScreen from '../screens/BoxContentsScreen';
 import BoxDetailScreen from '../screens/BoxDetailScreen';
 import AddBoxScreen from '../screens/AddBoxScreen';
+import EditBoxScreen from '../screens/EditBoxScreen';
 import { useAuthStore } from '../store/authStore';
 import type { RootStackParamList } from './types';
 
@@ -77,6 +78,7 @@ const AppNavigator: React.FC = () => {
             <Stack.Screen name="BoxContents" component={BoxContentsScreen} />
             <Stack.Screen name="BoxDetail" component={BoxDetailScreen} />
             <Stack.Screen name="AddBox" component={AddBoxScreen} />
+            <Stack.Screen name="EditBox" component={EditBoxScreen} />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />
