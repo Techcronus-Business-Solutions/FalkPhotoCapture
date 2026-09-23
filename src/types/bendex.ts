@@ -8,6 +8,9 @@ export interface BendexItem {
   trimName: string;
   boxNumber: number;
   color: string;
+  position:string;
+  length: number;
+  width: number;
 }
 
 export interface BoxTrimCount {
@@ -25,4 +28,5 @@ export interface BendexAssignmentItem {
   color: string;
   length: number;
   width: number;
+  position: string;
 }

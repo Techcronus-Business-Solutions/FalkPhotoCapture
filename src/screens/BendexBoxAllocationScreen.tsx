@@ -223,7 +223,7 @@ const BendexBoxAllocationScreen: React.FC<{
                         color={COLORS.black}
                         weight="medium"
                       >
-                        {item.trimName}
+                        {item.trimName + ' (Pos ' + item.position + ')'}
                       </CustomText>
                       <CustomText
                         size={FontSize.smallText}
@@ -234,9 +234,15 @@ const BendexBoxAllocationScreen: React.FC<{
                     </View>
 
                     <Ionicons
-                      name={selectedIds.has(itemId) ? 'checkbox' : 'square-outline'}
+                      name={
+                        selectedIds.has(itemId) ? 'checkbox' : 'square-outline'
+                      }
                       size={wp(6)}
-                      color={selectedIds.has(itemId) ? COLORS.primary : COLORS.greyText}
+                      color={
+                        selectedIds.has(itemId)
+                          ? COLORS.primary
+                          : COLORS.greyText
+                      }
                     />
                   </TouchableOpacity>
 

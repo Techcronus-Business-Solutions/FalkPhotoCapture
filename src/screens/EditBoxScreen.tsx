@@ -49,9 +49,7 @@ const EditBoxScreen: React.FC<{
   const [selectedAvailableItem, setSelectedAvailableItem] =
     useState<AvailableItem | null>(null);
   const [addQuantity, setAddQuantity] = useState('1');
-  const [addQuantityError, setAddQuantityError] = useState<string | null>(
-    null,
-  );
+  const [addQuantityError, setAddQuantityError] = useState<string | null>(null);
   const handleBack = useBackHandler(navigation);
   const { availableItems } = useAvailableBendexItems(orderNumber);
 
@@ -132,6 +130,8 @@ const EditBoxScreen: React.FC<{
       {
         id: selectedAvailableItem.id,
         name: `${selectedAvailableItem.name} ${selectedAvailableItem.quantityLabel}`,
+        trimName: selectedAvailableItem.trimName,
+        position: selectedAvailableItem.position,
         description: selectedAvailableItem.description,
         quantity: Number(addQuantity),
         availableQuantity: selectedAvailableItem.availableQuantity,

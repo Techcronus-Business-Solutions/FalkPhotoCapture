@@ -6,6 +6,18 @@ import type {
   BoxTrimCount,
 } from '../types/bendex';
 
+export interface AssignBendexQuantityItem {
+  trimname: string;
+  assignedQuantity: string;
+  position: string;
+}
+
+export interface AssignBendexQuantityRequest {
+  orderNumber: string;
+  boxNumber: string;
+  itemList: AssignBendexQuantityItem[];
+}
+
 export const bendexService = {
   fetchBendexData: async (orderNumber: string): Promise<BendexItem[]> => {
     const trimmedOrder = orderNumber.trim();
@@ -65,4 +77,9 @@ export const bendexService = {
 
     return json.data as BendexAssignmentItem[];
   },
+
+  assignBendexQuantity: async (
+    request: AssignBendexQuantityRequest,
+  ): Promise<Response> =>
+    apiClient.post(API_ROUTES.ASSIGN_BENDEX_QUANTITY, request),
 };

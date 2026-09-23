@@ -3,13 +3,15 @@ import { bendexService } from '../services/bendexService';
 import type { BendexAssignmentItem } from '../types/bendex';
 import type { AddBoxItem } from '../navigation/types';
 
-const mapToAddBoxItem = (
-  item: BendexAssignmentItem,
-  index: number,
-): AddBoxItem => ({
-  id: `${item.bandexOrderID}-${item.trimname}-${index}`,
-  name: item.trimname,
-  description: item.color,
+const mapToAddBoxItem = (item: BendexAssignmentItem): AddBoxItem => ({
+  id: `${item.trimname}-${item.position}`,
+  name: item.trimname + ' (Pos ' + item.position + ')',
+  trimName: item.trimname,
+  position: String(item.position),
+  description:
+    item.length !== 0 && item.width !== 0
+      ? `${item.color}\n${item.length} mm x ${item.width} mm`
+      : item.color,
   quantity: item.assignedQuantity,
   availableQuantity: item.assignedQuantity,
 });

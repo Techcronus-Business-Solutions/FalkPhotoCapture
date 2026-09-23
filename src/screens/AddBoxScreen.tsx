@@ -16,6 +16,7 @@ import { toDigitsOnly } from '../utils/input';
 import { getQuantityValidationError } from '../utils/quantity';
 import useBackHandler from '../hooks/useBackHandler';
 import useAvailableBendexItems from '../hooks/useAvailableBendexItems';
+import { bendexService } from '../services/bendexService';
 import type {
   AddBoxNavigationProp,
   AddBoxRouteProp,
@@ -41,9 +42,8 @@ const AddBoxScreen: React.FC<{
   const [selectedAvailableItem, setSelectedAvailableItem] =
     useState<AvailableItem | null>(null);
   const [addQuantity, setAddQuantity] = useState('1');
-  const [addQuantityError, setAddQuantityError] = useState<string | null>(
-    null,
-  );
+  const [addQuantityError, setAddQuantityError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const handleBack = useBackHandler(navigation);
   const { availableItems } = useAvailableBendexItems(orderNumber);
 
@@ -124,6 +124,8 @@ const AddBoxScreen: React.FC<{
       {
         id: selectedAvailableItem.id,
         name: `${selectedAvailableItem.name} ${selectedAvailableItem.quantityLabel}`,
+        trimName: selectedAvailableItem.trimName,
+        position: selectedAvailableItem.position,
         description: selectedAvailableItem.description,
         quantity: Number(addQuantity),
         availableQuantity: selectedAvailableItem.availableQuantity,
@@ -132,7 +134,26 @@ const AddBoxScreen: React.FC<{
     closeAddItem();
   };
 
-  const handleSave = () => {
+  const buildAssignBendexQuantityRequest = () => ({
+    orderNumber: orderNumber.trim(),
+    boxNumber: boxNumber.trim(),
+    itemList: items.map(item => ({
+      trimname: item.trimName.trim(),
+      assignedQuantity: String(item.quantity),
+      position: item.position.trim(),
+    })),
+  });
+
+  const handleSave = async () => {
+    if (!orderNumber.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Order number is unavailable.',
+      });
+      return;
+    }
+
     if (!boxNumber.trim()) {
       Toast.show({
         type: 'error',
@@ -142,11 +163,82 @@ const AddBoxScreen: React.FC<{
       return;
     }
 
-    console.log('Box ready to save:', {
-      orderNumber,
-      boxNumber: boxNumber.trim(),
-      items,
-    });
+    if (items.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please add at least one item.',
+      });
+      return;
+    }
+
+    if (
+      items.some(
+        item =>
+          !item.trimName.trim() ||
+          !item.position.trim() ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity <= 0,
+      )
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please enter a valid quantity for every item.',
+      });
+      return;
+    }
+
+    const requestData = buildAssignBendexQuantityRequest();
+    console.log(
+      'assignBendexQuantity request:',
+      JSON.stringify(requestData, null, 2),
+    );
+
+    setIsSaving(true);
+    try {
+      const response = await bendexService.assignBendexQuantity(requestData);
+      const responseText = await response.text();
+      let responseData: { success?: boolean; message?: string } = {};
+
+      if (responseText) {
+        try {
+          responseData = JSON.parse(responseText);
+        } catch {
+          responseData = {};
+        }
+      }
+
+      console.log('assignBendexQuantity response:', {
+        status: response.status,
+        response: responseData,
+      });
+
+      if (!response.ok || responseData.success === false) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2:
+            responseData.message || 'Something went wrong. Please try again.',
+        });
+        return;
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: responseData.message || 'Box added successfully.',
+      });
+      navigation.goBack();
+    } catch {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -263,7 +355,7 @@ const AddBoxScreen: React.FC<{
       <View
         style={[styles.bottomBar, { paddingBottom: insets.bottom + wp(3) }]}
       >
-        <CustomButton title="Save" onPress={handleSave} />
+        <CustomButton title="Save" onPress={handleSave} loading={isSaving} />
       </View>
 
       <ItemQuantityModal

@@ -54,7 +54,11 @@ export const apiClient = {
     const authHeaders = await getAuthHeaders();
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
       body: JSON.stringify(body),
     });
     await logResponse(response);

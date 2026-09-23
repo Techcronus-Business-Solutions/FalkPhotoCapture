@@ -3,11 +3,16 @@ import { bendexService } from '../services/bendexService';
 import type { BendexItem } from '../types/bendex';
 import type { AvailableItem } from '../navigation/types';
 
-const mapToAvailableItem = (item: BendexItem, index: number): AvailableItem => ({
-  id: `${item.bendexOrderID}-${item.title}-${index}`,
-  name: item.trimName,
+const mapToAvailableItem = (item: BendexItem): AvailableItem => ({
+  id: `${item.trimName}-${item.position}`,
+  name: item.trimName + ' (Pos ' + item.position + ')',
+  trimName: item.trimName,
+  position: String(item.position),
   quantityLabel: `(Qty - ${item.availableQuantity})`,
-  description: item.color,
+  description:
+    item.length !== 0 && item.width !== 0
+      ? `${item.color}\n${item.length} mm x ${item.width} mm`
+      : item.color,
   availableQuantity: item.availableQuantity,
 });
 

@@ -22,6 +22,8 @@ export interface BoxDetailItem {
 export interface AddBoxItem {
   id: string;
   name: string;
+  trimName: string;
+  position: string;
   description: string;
   quantity: number;
   availableQuantity: number;
@@ -30,6 +32,8 @@ export interface AddBoxItem {
 export interface AvailableItem {
   id: string;
   name: string;
+  trimName: string;
+  position: string;
   quantityLabel: string;
   description: string;
   availableQuantity: number;
