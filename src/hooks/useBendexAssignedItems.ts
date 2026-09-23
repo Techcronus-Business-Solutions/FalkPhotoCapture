@@ -1,0 +1,55 @@
+import { useEffect, useState } from 'react';
+import { bendexService } from '../services/bendexService';
+import type { BendexAssignmentItem } from '../types/bendex';
+import type { AddBoxItem } from '../navigation/types';
+
+const mapToAddBoxItem = (
+  item: BendexAssignmentItem,
+  index: number,
+): AddBoxItem => ({
+  id: `${item.bandexOrderID}-${item.trimname}-${index}`,
+  name: item.trimname,
+  description: item.color,
+  quantity: item.assignedQuantity,
+  availableQuantity: item.assignedQuantity,
+});
+
+const useBendexAssignedItems = (orderNumber: string, boxNumber: number) => {
+  const [items, setItems] = useState<AddBoxItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const assignments = await bendexService.fetchBendexAssignment(
+          orderNumber,
+          boxNumber,
+        );
+        if (!cancelled) {
+          setItems(assignments.map(mapToAddBoxItem));
+        }
+      } catch {
+        if (!cancelled) {
+          setItems([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orderNumber, boxNumber]);
+
+  return { items, setItems, loading };
+};
+
+export default useBendexAssignedItems;

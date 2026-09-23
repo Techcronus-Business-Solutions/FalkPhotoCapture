@@ -22,6 +22,7 @@ interface ItemQuantityModalProps {
   onQuantityChange: (quantity: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
+  error?: string | null;
 }
 
 const ItemQuantityModal: React.FC<ItemQuantityModalProps> = ({
@@ -33,6 +34,7 @@ const ItemQuantityModal: React.FC<ItemQuantityModalProps> = ({
   onQuantityChange,
   onCancel,
   onConfirm,
+  error,
 }) => (
   <Modal
     visible={visible}
@@ -68,6 +70,15 @@ const ItemQuantityModal: React.FC<ItemQuantityModalProps> = ({
               returnKeyType="done"
               containerStyle={styles.quantityInput}
             />
+            {!!error && (
+              <CustomText
+                size={FontSize.smallText}
+                color={COLORS.failed}
+                style={styles.errorText}
+              >
+                {error}
+              </CustomText>
+            )}
           </View>
           <CustomButton
             title={buttonTitle}
@@ -110,6 +121,9 @@ const styles = StyleSheet.create({
   inputWrapper: {
     width: '100%',
     marginVertical: wp(1),
+  },
+  errorText: {
+    alignSelf: 'flex-start',
   },
   updateButton: {
     width: '100%',

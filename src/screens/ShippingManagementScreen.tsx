@@ -30,7 +30,6 @@ import type {
   ShippingManagementNavigationProp,
   ShippingManagementRouteProp,
   ScanCompletedResult,
-  BoxDetailItem,
 } from '../navigation/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -116,24 +115,6 @@ const ENTRY_TYPES = [
   { label: 'Panel', value: 'Panel' },
   { label: 'Trim Box', value: 'Trim Box' },
 ];
-
-const createDummyBoxItems = (boxNumber: number, itemCount: number) =>
-  Array.from({ length: itemCount }, (_, index) => ({
-    id: `${boxNumber}-${index + 1}`,
-    name: 'Parapet Trim 12.5 (Qty - 27)',
-    description: 'PVDF - Slate Gray-6,172.2 mm × 151.2',
-    quantity: 15,
-  }));
-
-const DUMMY_BOX_DETAILS: BoxDetailItem[] = [1, 2, 3].map(boxNumber => ({
-  boxNumber,
-  boxName: `Box ${boxNumber}`,
-  itemCount: boxNumber === 1 ? 2 : boxNumber === 2 ? 5 : 8,
-  items: createDummyBoxItems(
-    boxNumber,
-    boxNumber === 1 ? 2 : boxNumber === 2 ? 5 : 8,
-  ),
-}));
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
@@ -1076,12 +1057,7 @@ const ShippingManagementScreen: React.FC<{
           <TouchableOpacity
             activeOpacity={0.8}
             style={styles.addNewBoxButton}
-            onPress={() =>
-              navigation.navigate('BoxDetail', {
-                orderNumber,
-                boxes: DUMMY_BOX_DETAILS,
-              })
-            }
+            onPress={() => navigation.navigate('BoxDetail', { orderNumber })}
           >
             <CustomText
               size={FontSize.normalText}

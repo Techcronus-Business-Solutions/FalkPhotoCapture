@@ -1,5 +1,11 @@
 import React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import Header from '../components/Header';
 import CustomButton from '../components/CustomButton';
@@ -7,6 +13,7 @@ import CustomText from '../components/CustomText';
 import { COLORS, FontSize } from '../assets/constants';
 import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
+import useBendexBoxList from '../hooks/useBendexBoxList';
 import type {
   BoxDetailNavigationProp,
   BoxDetailRouteProp,
@@ -16,8 +23,9 @@ const BoxDetailScreen: React.FC<{
   navigation: BoxDetailNavigationProp;
   route: BoxDetailRouteProp;
 }> = ({ navigation, route }) => {
-  const { orderNumber, boxes } = route.params;
+  const { orderNumber } = route.params;
   const handleBack = useBackHandler(navigation);
+  const { boxes, loading } = useBendexBoxList(orderNumber);
 
   return (
     <View style={styles.root}>
@@ -82,44 +90,56 @@ const BoxDetailScreen: React.FC<{
             </View>
           </View>
 
-          {boxes.map((box, index) => (
-            <TouchableOpacity
-              key={`${box.boxName}-${index}`}
-              style={[styles.boxRow, index > 0 && styles.boxRowBorder]}
-              activeOpacity={0.8}
-              onPress={() =>
-                navigation.navigate('EditBox', { orderNumber, box })
-              }
-            >
-              <Ionicons
-                name="cube-outline"
-                size={wp(8)}
-                color={COLORS.primary}
-                style={styles.boxIcon}
-              />
-              <View style={styles.boxText}>
-                <CustomText
-                  size={FontSize.normalLargeText}
+          {loading ? (
+            <View style={styles.boxListEmptyState}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            </View>
+          ) : boxes.length === 0 ? (
+            <View style={styles.boxListEmptyState}>
+              <CustomText size={FontSize.normalText} color={COLORS.greyText}>
+                No boxes found for this order.
+              </CustomText>
+            </View>
+          ) : (
+            boxes.map((box, index) => (
+              <TouchableOpacity
+                key={`${box.boxName}-${index}`}
+                style={[styles.boxRow, index > 0 && styles.boxRowBorder]}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate('EditBox', { orderNumber, box })
+                }
+              >
+                <Ionicons
+                  name="cube-outline"
+                  size={wp(8)}
                   color={COLORS.primary}
-                  weight="semibold"
-                >
-                  {box.boxName}
-                </CustomText>
-                <CustomText
-                  size={FontSize.normalText}
+                  style={styles.boxIcon}
+                />
+                <View style={styles.boxText}>
+                  <CustomText
+                    size={FontSize.normalLargeText}
+                    color={COLORS.primary}
+                    weight="semibold"
+                  >
+                    {box.boxName}
+                  </CustomText>
+                  <CustomText
+                    size={FontSize.normalText}
+                    color={COLORS.primary}
+                    weight="regular"
+                  >
+                    {`${box.itemCount} Items`}
+                  </CustomText>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={wp(6)}
                   color={COLORS.primary}
-                  weight="regular"
-                >
-                  {`${box.itemCount} Items`}
-                </CustomText>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={wp(6)}
-                color={COLORS.primary}
-              />
-            </TouchableOpacity>
-          ))}
+                />
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -176,6 +196,12 @@ const styles = StyleSheet.create({
     borderRadius: wp(5),
     paddingHorizontal: wp(3),
     paddingVertical: wp(2),
+  },
+  boxListEmptyState: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: wp(4),
+    paddingVertical: wp(8),
   },
   boxRow: {
     flexDirection: 'row',

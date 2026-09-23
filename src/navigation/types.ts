@@ -17,7 +17,6 @@ export interface BoxDetailItem {
   boxNumber: number;
   boxName: string;
   itemCount: number;
-  items: AddBoxItem[];
 }
 
 export interface AddBoxItem {
@@ -25,6 +24,7 @@ export interface AddBoxItem {
   name: string;
   description: string;
   quantity: number;
+  availableQuantity: number;
 }
 
 export interface AvailableItem {
@@ -32,6 +32,7 @@ export interface AvailableItem {
   name: string;
   quantityLabel: string;
   description: string;
+  availableQuantity: number;
 }
 
 export interface PanelLocationItem {
@@ -110,7 +111,6 @@ export type RootStackParamList = {
   };
   BoxDetail: {
     orderNumber: string;
-    boxes: BoxDetailItem[];
   };
   AddBox: {
     orderNumber: string;

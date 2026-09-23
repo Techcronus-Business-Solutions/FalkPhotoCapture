@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-camera-kit';
@@ -19,30 +20,10 @@ import { wp } from '../utils/responsive';
 import useBackHandler from '../hooks/useBackHandler';
 import useCameraScanner from '../hooks/useCameraScanner';
 import { toDigitsOnly } from '../utils/input';
+import { apiClient } from '../services/apiClient';
+import { API_ROUTES } from '../services/ApiRoutes';
+import type { BendexItem } from '../types/bendex';
 import type { BendexBoxAllocationNavigationProp } from '../navigation/types';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface TrimItem {
-  id: string;
-  name: string;
-  qty: number;
-}
-
-// ─── Mock Data (replace with API data later) ─────────────────────────────────
-
-const TRIM_LIST: TrimItem[] = [
-  { id: '1', name: '12ga - Galvanized', qty: 27 },
-  { id: '2', name: '22ga - PVDF - Charcoal', qty: 13 },
-  { id: '3', name: '22ga - SMP - Old Town Grey', qty: 255 },
-  { id: '4', name: '24ga - HPS200 - Ivy', qty: 100 },
-  { id: '5', name: '24ga - PVDF - Shadow Grey', qty: 550 },
-   { id: '6', name: '26ga - PE - Igloo White Emb', qty: 27 },
-  { id: '7', name: '26ga - SMP - Shale Green', qty: 13 },
-  { id: '8', name: '24ga - SMP - Goosewing Grey', qty: 255 },
-  { id: '9', name: '24ga - PVDF - Black', qty: 100 },
-  { id: '10', name: '24ga - SMP - Bright White Emb', qty: 550 },
-];
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
@@ -54,9 +35,45 @@ const BendexBoxAllocationScreen: React.FC<{
   const [orderNumber, setOrderNumber] = useState('');
   const [boxNumber, setBoxNumber] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [trimList, setTrimList] = useState<BendexItem[]>([]);
+  const [trimListLoading, setTrimListLoading] = useState(false);
   const { scannerVisible, openScanner, closeScanner } = useCameraScanner();
 
-  const trimList = useMemo(() => TRIM_LIST, []);
+  const fetchBendexItems = useCallback(async (order: string) => {
+    const trimmedOrder = order.trim();
+    if (!trimmedOrder) {
+      return;
+    }
+
+    setSelectedIds(new Set());
+    setTrimListLoading(true);
+    try {
+      const response = await apiClient.get(
+        `${API_ROUTES.GET_BENDEX_DATA}/${trimmedOrder}`,
+      );
+      const json = await response.json();
+
+      if (json.success && Array.isArray(json.data)) {
+        setTrimList(json.data as BendexItem[]);
+      } else {
+        setTrimList([]);
+        Toast.show({
+          type: 'error',
+          text1: 'No Items Found',
+          text2: json.message || 'No available items found for this order.',
+        });
+      }
+    } catch {
+      setTrimList([]);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to fetch available items. Please try again.',
+      });
+    } finally {
+      setTrimListLoading(false);
+    }
+  }, []);
 
   const handleReadCode = useCallback(
     (event: { nativeEvent: { codeStringValue: string } }) => {
@@ -65,7 +82,9 @@ const BendexBoxAllocationScreen: React.FC<{
         return;
       }
 
-      setOrderNumber(toDigitsOnly(codeStringValue));
+      const scannedOrderNumber = toDigitsOnly(codeStringValue);
+      setOrderNumber(scannedOrderNumber);
+      fetchBendexItems(scannedOrderNumber);
 
       Toast.show({
         type: 'info',
@@ -75,7 +94,7 @@ const BendexBoxAllocationScreen: React.FC<{
 
       setTimeout(closeScanner, 800);
     },
-    [closeScanner],
+    [closeScanner, fetchBendexItems],
   );
 
   const handleBarcodePress = openScanner;
@@ -144,6 +163,8 @@ const BendexBoxAllocationScreen: React.FC<{
           value={orderNumber}
           onChangeText={v => setOrderNumber(toDigitsOnly(v))}
           keyboardType="number-pad"
+          returnKeyType="search"
+          onSubmitEditing={() => fetchBendexItems(orderNumber)}
           rightIconName="barcode-outline"
           onRightPress={handleBarcodePress}
         />
@@ -173,43 +194,60 @@ const BendexBoxAllocationScreen: React.FC<{
 
         <View style={styles.trimsDivider} />
 
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {trimList.map((item, index) => (
-            <React.Fragment key={item.id}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={styles.trimRow}
-                onPress={() => toggleItem(item.id)}
-              >
-                <View style={styles.trimRowText}>
-                  <CustomText
-                    size={FontSize.normalLargeText}
-                    color={COLORS.black}
-                    weight="medium"
+        {trimListLoading ? (
+          <View style={styles.trimsEmptyState}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        ) : trimList.length === 0 ? (
+          <View style={styles.trimsEmptyState}>
+            <CustomText size={FontSize.normalText} color={COLORS.greyText}>
+              {orderNumber
+                ? 'No available items found for this order.'
+                : 'Enter or scan an Order Number to load items.'}
+            </CustomText>
+          </View>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {trimList.map((item, index) => {
+              const itemId = `${item.bendexOrderID}-${item.title}-${index}`;
+              return (
+                <React.Fragment key={itemId}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    style={styles.trimRow}
+                    onPress={() => toggleItem(itemId)}
                   >
-                    {item.name}
-                  </CustomText>
-                  <CustomText
-                    size={FontSize.smallText}
-                    color={COLORS.greyText}
-                  >
-                    {`Qty - ${item.qty}`}
-                  </CustomText>
-                </View>
+                    <View style={styles.trimRowText}>
+                      <CustomText
+                        size={FontSize.normalLargeText}
+                        color={COLORS.black}
+                        weight="medium"
+                      >
+                        {item.trimName}
+                      </CustomText>
+                      <CustomText
+                        size={FontSize.smallText}
+                        color={COLORS.greyText}
+                      >
+                        {`${item.color} • Qty - ${item.availableQuantity}`}
+                      </CustomText>
+                    </View>
 
-                <Ionicons
-                  name={selectedIds.has(item.id) ? 'checkbox' : 'square-outline'}
-                  size={wp(6)}
-                  color={selectedIds.has(item.id) ? COLORS.primary : COLORS.greyText}
-                />
-              </TouchableOpacity>
+                    <Ionicons
+                      name={selectedIds.has(itemId) ? 'checkbox' : 'square-outline'}
+                      size={wp(6)}
+                      color={selectedIds.has(itemId) ? COLORS.primary : COLORS.greyText}
+                    />
+                  </TouchableOpacity>
 
-              {index < trimList.length - 1 && (
-                <View style={styles.trimRowDivider} />
-              )}
-            </React.Fragment>
-          ))}
-        </ScrollView>
+                  {index < trimList.length - 1 && (
+                    <View style={styles.trimRowDivider} />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </ScrollView>
+        )}
       </View>
 
       {/* ── Box Number (fixed between list and buttons) ── */}
@@ -329,6 +367,13 @@ const styles = StyleSheet.create({
   trimsDivider: {
     height: wp(0.3),
     backgroundColor: COLORS.border,
+  },
+  trimsEmptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: wp(4),
+    paddingVertical: wp(8),
   },
   trimRow: {
     flexDirection: 'row',

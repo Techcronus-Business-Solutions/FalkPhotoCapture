@@ -11,31 +11,17 @@ import DeleteItemModal from '../components/DeleteItemModal';
 import AvailableItemsModal from '../components/AvailableItemsModal';
 import ItemQuantityModal from '../components/ItemQuantityModal';
 import { COLORS, FontSize } from '../assets/constants';
-import { AVAILABLE_ITEMS } from '../assets/constants/availableItems';
 import { wp } from '../utils/responsive';
 import { toDigitsOnly } from '../utils/input';
+import { getQuantityValidationError } from '../utils/quantity';
 import useBackHandler from '../hooks/useBackHandler';
+import useAvailableBendexItems from '../hooks/useAvailableBendexItems';
 import type {
   AddBoxNavigationProp,
   AddBoxRouteProp,
   AddBoxItem,
   AvailableItem,
 } from '../navigation/types';
-
-const DUMMY_ITEMS: AddBoxItem[] = [
-  {
-    id: '1',
-    name: 'Parapet Trim 12.5 (Qty - 27)',
-    description: 'PVDF - Slate Gray-6,172.2 mm × 151.2',
-    quantity: 15,
-  },
-  {
-    id: '2',
-    name: 'Parapet Trim 12.5 (Qty - 27)',
-    description: 'PVDF - Slate Gray-6,172.2 mm × 151.2',
-    quantity: 15,
-  },
-];
 
 const AddBoxScreen: React.FC<{
   navigation: AddBoxNavigationProp;
@@ -44,23 +30,45 @@ const AddBoxScreen: React.FC<{
   const { orderNumber } = route.params;
   const insets = useSafeAreaInsets();
   const [boxNumber, setBoxNumber] = useState('');
-  const [items, setItems] = useState<AddBoxItem[]>(DUMMY_ITEMS);
+  const [items, setItems] = useState<AddBoxItem[]>([]);
   const [editItem, setEditItem] = useState<AddBoxItem | null>(null);
   const [deleteItem, setDeleteItem] = useState<AddBoxItem | null>(null);
   const [editQuantity, setEditQuantity] = useState('');
+  const [editQuantityError, setEditQuantityError] = useState<string | null>(
+    null,
+  );
   const [showAvailableItems, setShowAvailableItems] = useState(false);
   const [selectedAvailableItem, setSelectedAvailableItem] =
     useState<AvailableItem | null>(null);
-  const [addQuantity, setAddQuantity] = useState('15');
+  const [addQuantity, setAddQuantity] = useState('1');
+  const [addQuantityError, setAddQuantityError] = useState<string | null>(
+    null,
+  );
   const handleBack = useBackHandler(navigation);
+  const { availableItems } = useAvailableBendexItems(orderNumber);
 
   const openEditItem = (item: AddBoxItem) => {
     setEditQuantity(String(item.quantity));
+    setEditQuantityError(null);
     setEditItem(item);
   };
 
+  const closeEditItem = () => {
+    setEditItem(null);
+    setEditQuantityError(null);
+  };
+
   const handleUpdateItem = () => {
-    if (!editItem || !editQuantity.trim()) {
+    if (!editItem) {
+      return;
+    }
+
+    const validationError = getQuantityValidationError(
+      editQuantity,
+      editItem.availableQuantity,
+    );
+    if (validationError) {
+      setEditQuantityError(validationError);
       return;
     }
 
@@ -71,7 +79,7 @@ const AddBoxScreen: React.FC<{
           : item,
       ),
     );
-    setEditItem(null);
+    closeEditItem();
   };
 
   const handleDeleteItem = () => {
@@ -88,20 +96,26 @@ const AddBoxScreen: React.FC<{
   const handleSelectAvailableItem = (item: AvailableItem) => {
     setSelectedAvailableItem(item);
     setShowAvailableItems(false);
-    setAddQuantity('15');
+    setAddQuantity('1');
+    setAddQuantityError(null);
+  };
+
+  const closeAddItem = () => {
+    setSelectedAvailableItem(null);
+    setAddQuantityError(null);
   };
 
   const handleAddItem = () => {
-    if (
-      !selectedAvailableItem ||
-      !addQuantity.trim() ||
-      Number(addQuantity) <= 0
-    ) {
-      Toast.show({
-        type: 'error',
-        text1: 'Validation Error',
-        text2: 'Please enter a valid quantity.',
-      });
+    if (!selectedAvailableItem) {
+      return;
+    }
+
+    const validationError = getQuantityValidationError(
+      addQuantity,
+      selectedAvailableItem.availableQuantity,
+    );
+    if (validationError) {
+      setAddQuantityError(validationError);
       return;
     }
 
@@ -112,9 +126,10 @@ const AddBoxScreen: React.FC<{
         name: `${selectedAvailableItem.name} ${selectedAvailableItem.quantityLabel}`,
         description: selectedAvailableItem.description,
         quantity: Number(addQuantity),
+        availableQuantity: selectedAvailableItem.availableQuantity,
       },
     ]);
-    setSelectedAvailableItem(null);
+    closeAddItem();
   };
 
   const handleSave = () => {
@@ -253,15 +268,17 @@ const AddBoxScreen: React.FC<{
 
       <ItemQuantityModal
         visible={editItem !== null}
-        onCancel={() => setEditItem(null)}
+        onCancel={closeEditItem}
         onConfirm={handleUpdateItem}
         title={editItem ? editItem.name.replace(/\s+\(Qty.*\)$/, '') : ''}
         label="Edit Quantity"
         buttonTitle="Update"
         quantity={editQuantity}
-        onQuantityChange={(value: string) =>
-          setEditQuantity(toDigitsOnly(value))
-        }
+        onQuantityChange={(value: string) => {
+          setEditQuantity(toDigitsOnly(value));
+          setEditQuantityError(null);
+        }}
+        error={editQuantityError}
       />
 
       <DeleteItemModal
@@ -272,7 +289,7 @@ const AddBoxScreen: React.FC<{
 
       <AvailableItemsModal
         visible={showAvailableItems}
-        items={AVAILABLE_ITEMS.filter(
+        items={availableItems.filter(
           availableItem => !items.some(item => item.id === availableItem.id),
         )}
         onCancel={() => setShowAvailableItems(false)}
@@ -281,15 +298,17 @@ const AddBoxScreen: React.FC<{
 
       <ItemQuantityModal
         visible={selectedAvailableItem !== null}
-        onCancel={() => setSelectedAvailableItem(null)}
+        onCancel={closeAddItem}
         onConfirm={handleAddItem}
         title={selectedAvailableItem?.name ?? ''}
         label="Add Quantity"
         buttonTitle="Add"
         quantity={addQuantity}
-        onQuantityChange={(value: string) =>
-          setAddQuantity(toDigitsOnly(value))
-        }
+        onQuantityChange={(value: string) => {
+          setAddQuantity(toDigitsOnly(value));
+          setAddQuantityError(null);
+        }}
+        error={addQuantityError}
       />
     </View>
   );

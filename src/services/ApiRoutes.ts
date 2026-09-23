@@ -1,7 +1,7 @@
-// const BASE_URL = 'http://192.168.1.162:8080/api';
+const BASE_URL = 'http://192.168.1.162:8080/api';
 // export const API_BASE_HOST = 'http://192.168.1.162:8080';
 
-const BASE_URL = 'http://tbs01.westus.cloudapp.azure.com:91/api';
+// const BASE_URL = 'http://tbs01.westus.cloudapp.azure.com:91/api';
 export const API_BASE_HOST = 'http://tbs01.westus.cloudapp.azure.com:91';
 
 export const API_ROUTES = {
@@ -19,4 +19,7 @@ export const API_ROUTES = {
   SCAN_SHIPMENT: `${BASE_URL}/Shipment/scan`,
   SHIPMENT_BOLS: `${BASE_URL}/Shipment/shipment-bols`,
   UPLOAD_IMAGES: `${BASE_URL}/Shipment/upload-images`,
+  GET_BENDEX_DATA: `${BASE_URL}/BendexData/getbendexdata`,
+  GET_BENDEX_ASSIGNMENTS: `${BASE_URL}/BendexData/getBendexAssignments`,
+  BENDEX_ASSIGNMENT: `${BASE_URL}/BendexData/bendex-assignment`,
 } as const;
