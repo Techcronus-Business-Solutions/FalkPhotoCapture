@@ -19,6 +19,20 @@ export interface AssignBendexQuantityRequest {
   itemList: AssignBendexQuantityItem[];
 }
 
+export interface ProcessBendexQuantityItem {
+  trimname: string;
+  assignedQuantity: string;
+  bendexItemKey: string;
+  position: string;
+  flag: 'update' | 'add';
+}
+
+export interface ProcessBendexQuantityRequest {
+  orderNumber: string;
+  boxNumber: string;
+  itemList: ProcessBendexQuantityItem[];
+}
+
 export const bendexService = {
   fetchBendexData: async (orderNumber: string): Promise<BendexItem[]> => {
     const trimmedOrder = orderNumber.trim();
@@ -83,4 +97,9 @@ export const bendexService = {
     request: AssignBendexQuantityRequest,
   ): Promise<Response> =>
     apiClient.post(API_ROUTES.ASSIGN_BENDEX_QUANTITY, request),
+
+  processBendexQuantity: async (
+    request: ProcessBendexQuantityRequest,
+  ): Promise<Response> =>
+    apiClient.post(API_ROUTES.PROCESS_BENDEX_QUANTITY, request),
 };

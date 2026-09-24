@@ -27,6 +27,8 @@ export interface AddBoxItem {
   description: string;
   quantity: number;
   availableQuantity: number;
+  originalAssignedQuantity: number;
+  isNew: boolean;
 }
 
 export interface AvailableItem {

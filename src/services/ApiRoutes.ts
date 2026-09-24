@@ -23,4 +23,5 @@ export const API_ROUTES = {
   GET_BENDEX_ASSIGNMENTS: `${BASE_URL}/BendexData/getBendexAssignments`,
   BENDEX_ASSIGNMENT: `${BASE_URL}/BendexData/bendex-assignment`,
   ASSIGN_BENDEX_QUANTITY: `${BASE_URL}/BendexData/assignBendexQuantity`,
+  PROCESS_BENDEX_QUANTITY: `${BASE_URL}/BendexData/processBendexQuantity`,
 } as const;

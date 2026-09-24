@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from '../components/Header';
@@ -21,6 +22,11 @@ import { getQuantityValidationError } from '../utils/quantity';
 import useBackHandler from '../hooks/useBackHandler';
 import useAvailableBendexItems from '../hooks/useAvailableBendexItems';
 import useBendexAssignedItems from '../hooks/useBendexAssignedItems';
+import { bendexService } from '../services/bendexService';
+import {
+  addReturnedQuantitiesToAvailableItems,
+  buildProcessBendexRequest,
+} from '../utils/processBendexQuantity';
 import type {
   AddBoxItem,
   EditBoxNavigationProp,
@@ -38,9 +44,11 @@ const EditBoxScreen: React.FC<{
     items,
     setItems,
     loading: itemsLoading,
+    refresh: refreshItems,
   } = useBendexAssignedItems(orderNumber, box.boxNumber);
   const [editItem, setEditItem] = useState<AddBoxItem | null>(null);
   const [deleteItem, setDeleteItem] = useState<AddBoxItem | null>(null);
+  const [deletedItems, setDeletedItems] = useState<AddBoxItem[]>([]);
   const [editQuantity, setEditQuantity] = useState('');
   const [editQuantityError, setEditQuantityError] = useState<string | null>(
     null,
@@ -50,6 +58,7 @@ const EditBoxScreen: React.FC<{
     useState<AvailableItem | null>(null);
   const [addQuantity, setAddQuantity] = useState('1');
   const [addQuantityError, setAddQuantityError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const handleBack = useBackHandler(navigation);
   const { availableItems } = useAvailableBendexItems(orderNumber);
 
@@ -96,6 +105,13 @@ const EditBoxScreen: React.FC<{
     setItems(previousItems =>
       previousItems.filter(item => item.id !== deleteItem.id),
     );
+    if (!deleteItem.isNew) {
+      setDeletedItems(previousItems =>
+        previousItems.some(item => item.id === deleteItem.id)
+          ? previousItems
+          : [...previousItems, deleteItem],
+      );
+    }
     setDeleteItem(null);
   };
 
@@ -116,6 +132,10 @@ const EditBoxScreen: React.FC<{
       return;
     }
 
+    const deletedExistingItem = deletedItems.find(
+      item => item.id === selectedAvailableItem.id,
+    );
+
     const validationError = getQuantityValidationError(
       addQuantity,
       selectedAvailableItem.availableQuantity,
@@ -127,25 +147,152 @@ const EditBoxScreen: React.FC<{
 
     setItems(previousItems => [
       ...previousItems,
-      {
-        id: selectedAvailableItem.id,
-        name: `${selectedAvailableItem.name} ${selectedAvailableItem.quantityLabel}`,
-        trimName: selectedAvailableItem.trimName,
-        position: selectedAvailableItem.position,
-        description: selectedAvailableItem.description,
-        quantity: Number(addQuantity),
-        availableQuantity: selectedAvailableItem.availableQuantity,
-      },
+      deletedExistingItem
+        ? {
+            ...deletedExistingItem,
+            name: `${selectedAvailableItem.name} ${selectedAvailableItem.quantityLabel}`,
+            description: selectedAvailableItem.description,
+            quantity: Number(addQuantity),
+            availableQuantity: selectedAvailableItem.availableQuantity,
+            isNew: false,
+          }
+        : {
+            id: selectedAvailableItem.id,
+            name: `${selectedAvailableItem.name} ${selectedAvailableItem.quantityLabel}`,
+            trimName: selectedAvailableItem.trimName,
+            position: selectedAvailableItem.position,
+            description: selectedAvailableItem.description,
+            quantity: Number(addQuantity),
+            availableQuantity: selectedAvailableItem.availableQuantity,
+            originalAssignedQuantity: 0,
+            isNew: true,
+          },
     ]);
+    if (deletedExistingItem) {
+      setDeletedItems(previousItems =>
+        previousItems.filter(item => item.id !== deletedExistingItem.id),
+      );
+    }
     closeAddItem();
   };
 
-  const handleUpdate = () => {
-    console.log('Box ready to update:', {
-      boxNumber: box.boxNumber,
+  const availableItemsWithReturnedQuantity =
+    addReturnedQuantitiesToAvailableItems(availableItems, deletedItems);
+
+  const handleUpdate = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    if (!orderNumber.trim() || !String(box.boxNumber).trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Order number and box number are required.',
+      });
+      return;
+    }
+
+    const allChangedItems = [...items, ...deletedItems];
+    if (
+      allChangedItems.some(
+        item =>
+          !item.trimName.trim() ||
+          !item.id.trim() ||
+          !item.position.trim() ||
+          !Number.isInteger(item.originalAssignedQuantity) ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity < 0,
+      ) ||
+      items.some(item => item.isNew && item.quantity <= 0) ||
+      deletedItems.some(
+        item => item.isNew || item.originalAssignedQuantity <= 0,
+      )
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please check the item details and quantities.',
+      });
+      return;
+    }
+
+    const requestData = buildProcessBendexRequest(
       orderNumber,
+      box.boxNumber,
       items,
-    });
+      deletedItems,
+    );
+
+    if (requestData.itemList.length === 0) {
+      Toast.show({
+        type: 'info',
+        text1: 'No changes to update',
+      });
+      return;
+    }
+
+    console.log(
+      'processBendexQuantity request:',
+      JSON.stringify(requestData, null, 2),
+    );
+
+    setIsSaving(true);
+    try {
+      const response = await bendexService.processBendexQuantity(requestData);
+      const responseText = await response.text();
+      let responseData: { success?: boolean; message?: string } = {};
+
+      if (responseText) {
+        try {
+          responseData = JSON.parse(responseText);
+        } catch {
+          responseData = {};
+        }
+      }
+
+      console.log('processBendexQuantity response:', {
+        status: response.status,
+        response: responseData,
+      });
+
+      if (!response.ok || responseData.success === false) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2:
+            responseData.message || 'Something went wrong. Please try again.',
+        });
+        return;
+      }
+
+      const refreshedItems = await refreshItems();
+      if (!refreshedItems) {
+        Toast.show({
+          type: 'error',
+          text1: 'Refresh Error',
+          text2:
+            'The update succeeded, but the latest box data could not be loaded.',
+        });
+        return;
+      }
+
+      setDeletedItems([]);
+
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: responseData.message || 'Box updated successfully.',
+      });
+    } catch {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -269,7 +416,11 @@ const EditBoxScreen: React.FC<{
       <View
         style={[styles.bottomBar, { paddingBottom: insets.bottom + wp(3) }]}
       >
-        <CustomButton title="Update" onPress={handleUpdate} />
+        <CustomButton
+          title="Update"
+          onPress={handleUpdate}
+          loading={isSaving}
+        />
       </View>
 
       <ItemQuantityModal
@@ -295,7 +446,7 @@ const EditBoxScreen: React.FC<{
 
       <AvailableItemsModal
         visible={showAvailableItems}
-        items={availableItems.filter(
+        items={availableItemsWithReturnedQuantity.filter(
           availableItem => !items.some(item => item.id === availableItem.id),
         )}
         onCancel={() => setShowAvailableItems(false)}

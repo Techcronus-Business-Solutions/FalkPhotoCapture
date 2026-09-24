@@ -129,6 +129,8 @@ const AddBoxScreen: React.FC<{
         description: selectedAvailableItem.description,
         quantity: Number(addQuantity),
         availableQuantity: selectedAvailableItem.availableQuantity,
+        originalAssignedQuantity: 0,
+        isNew: true,
       },
     ]);
     closeAddItem();
