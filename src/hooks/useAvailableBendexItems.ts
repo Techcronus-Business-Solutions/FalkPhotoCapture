@@ -4,7 +4,7 @@ import type { BendexItem } from '../types/bendex';
 import type { AvailableItem } from '../navigation/types';
 
 const mapToAvailableItem = (item: BendexItem): AvailableItem => ({
-  id: `${item.trimName}-${item.position}`,
+  id: String(item.bendexItemKey),
   name: item.trimName + ' (Pos ' + item.position + ')',
   trimName: item.trimName,
   position: String(item.position),

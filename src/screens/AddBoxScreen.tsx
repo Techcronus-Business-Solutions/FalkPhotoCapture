@@ -141,6 +141,7 @@ const AddBoxScreen: React.FC<{
       trimname: item.trimName.trim(),
       assignedQuantity: String(item.quantity),
       position: item.position.trim(),
+      bendexItemKey: item.id,
     })),
   });
 

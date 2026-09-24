@@ -8,9 +8,10 @@ export interface BendexItem {
   trimName: string;
   boxNumber: number;
   color: string;
-  position:string;
+  position: string;
   length: number;
   width: number;
+  bendexItemKey: string;
 }
 
 export interface BoxTrimCount {
@@ -23,10 +24,12 @@ export interface BendexAssignmentItem {
   orderNumber: string;
   bandexOrderID: string;
   assignedQuantity: number;
+  availableQuantity: number;
   id: string;
   trimname: string;
   color: string;
   length: number;
   width: number;
   position: string;
+  bendexItemKey: string;
 }

@@ -10,6 +10,7 @@ export interface AssignBendexQuantityItem {
   trimname: string;
   assignedQuantity: string;
   position: string;
+  bendexItemKey: string;
 }
 
 export interface AssignBendexQuantityRequest {
