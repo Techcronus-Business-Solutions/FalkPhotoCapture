@@ -8,7 +8,10 @@ import {
 } from '../store/pendingUploadsStore';
 import RNFS from 'react-native-fs';
 
-type MergeBolImagesFn = (bol: string, images: ShipmentBOLImage[]) => Promise<void>;
+type MergeBolImagesFn = (
+  bol: string,
+  images: ShipmentBOLImage[],
+) => Promise<void>;
 
 export interface UploadResult {
   success: boolean;
@@ -18,6 +21,9 @@ export interface UploadResult {
 interface UploadApiResponse {
   data: ShipmentBOLImage[];
 }
+
+const getImageMimeType = (fileName: string): string =>
+  /\.(jpe?g)$/i.test(fileName) ? 'image/jpeg' : 'image/png';
 
 const ensureOfflinePhotoUri = async (
   photo: PhotoItem,
@@ -49,15 +55,20 @@ const buildMultipartForm = (
   for (const entry of imageEntries) {
     formData.append('Images', {
       uri: entry.uri,
-      type: 'image/png',
+      type: getImageMimeType(entry.fileName),
       name: entry.fileName,
     } as any);
   }
   return formData;
 };
 
-const callUploadApi = async (formData: FormData): Promise<ShipmentBOLImage[]> => {
-  const response = await apiClient.postMultipart(API_ROUTES.UPLOAD_IMAGES, formData);
+const callUploadApi = async (
+  formData: FormData,
+): Promise<ShipmentBOLImage[]> => {
+  const response = await apiClient.postMultipart(
+    API_ROUTES.UPLOAD_IMAGES,
+    formData,
+  );
 
   if (!response.ok) {
     const text = await response.text();
@@ -80,10 +91,13 @@ export const uploadService = {
 
     const imageEntries = photos.map(photo => ({
       uri: photo.uri,
-      fileName: photo.fileName ?? `${photo.id}.png`,
+      fileName: photo.fileName ?? `${photo.id}.jpg`,
     }));
 
-    console.log('[uploadService] uploadPhotosOnline filenames:', imageEntries.map(e => e.fileName));
+    console.log(
+      '[uploadService] uploadPhotosOnline filenames:',
+      imageEntries.map(e => e.fileName),
+    );
 
     const formData = buildMultipartForm(bol, orderNumber, imageEntries);
     return callUploadApi(formData);
@@ -103,7 +117,7 @@ export const uploadService = {
     const pendingUploads: PendingUpload[] = [];
 
     for (const photo of photos) {
-      const fileName = photo.fileName ?? `${photo.id}.png`;
+      const fileName = photo.fileName ?? `${photo.id}.jpg`;
       const uri = await ensureOfflinePhotoUri(photo, fileName);
 
       pendingUploads.push({
@@ -134,16 +148,13 @@ export const uploadService = {
       return { syncedCount: 0, failedCount: 0 };
     }
 
-    const groupedByBol = allPendingUploads.reduce(
-      (acc, upload) => {
-        if (!acc[upload.shipmentNumber]) {
-          acc[upload.shipmentNumber] = [];
-        }
-        acc[upload.shipmentNumber].push(upload);
-        return acc;
-      },
-      {} as Record<string, PendingUpload[]>,
-    );
+    const groupedByBol = allPendingUploads.reduce((acc, upload) => {
+      if (!acc[upload.shipmentNumber]) {
+        acc[upload.shipmentNumber] = [];
+      }
+      acc[upload.shipmentNumber].push(upload);
+      return acc;
+    }, {} as Record<string, PendingUpload[]>);
 
     let syncedCount = 0;
     let failedCount = 0;
@@ -158,7 +169,12 @@ export const uploadService = {
           fileName: u.fileName,
         }));
 
-        console.log('[uploadService] syncPendingUploads filenames for BOL', bol, ':', imageEntries.map(e => e.fileName));
+        console.log(
+          '[uploadService] syncPendingUploads filenames for BOL',
+          bol,
+          ':',
+          imageEntries.map(e => e.fileName),
+        );
 
         const formData = buildMultipartForm(bol, orderNumber, imageEntries);
         const returnedImages = await callUploadApi(formData);

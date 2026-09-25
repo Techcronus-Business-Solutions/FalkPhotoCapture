@@ -20,16 +20,16 @@ import type {
 } from '../navigation/types';
 import CustomButton from '../components/CustomButton';
 
-const SCAN_TYPES = [
-  { label: 'Load', value: 'Load' },
-  { label: 'Move', value: 'Move' },
-  { label: 'Ship', value: 'Ship' },
-  { label: 'QA Hold', value: 'QA Hold' },
-  { label: 'Release Hold', value: 'Release Hold' },
-];
-
 const toDropdownOptions = (items: string[]) =>
   items.map(item => ({ label: item, value: item }));
+
+const SCAN_TYPE_OPTIONS: ScanTypeValue[] = [
+  'Load',
+  'Move',
+  'Ship',
+  'QA Hold',
+  'Release Hold',
+];
 
 const isBolForOrder = (bol: string, orderNumber: string): boolean => {
   const escapedOrderNumber = orderNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -52,6 +52,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
     orderNumber,
     panelCurrentStatus,
     panelLastScanType,
+    paymentStatus,
     trimBoxStatuses,
     onScanComplete,
   } = route.params;
@@ -75,6 +76,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
     { label: string; value: string }[]
   >([]);
   const [masterDataLoading, setMasterDataLoading] = useState(false);
+  const paymentIsPending = paymentStatus?.trim().toLowerCase() !== 'approved';
 
   useEffect(() => {
     const fetchMasterData = async () => {
@@ -141,6 +143,16 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
+
+    if (scanType === 'Ship' && paymentIsPending) {
+      Toast.show({
+        type: 'error',
+        text1: 'Payment Pending',
+        text2:
+          'Payment is pending. Ship scan is not allowed until payment is approved.',
+      });
+      return;
+    }
 
     if (entityType === 'Trim Box' && !boxNumber.trim()) {
       Toast.show({
@@ -341,6 +353,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
     }
   }, [
     submitting,
+    paymentIsPending,
     entityType,
     csv,
     orderNumber,
@@ -439,7 +452,10 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
           <CustomDropdown
             label="Scan Type"
             placeholder="Load"
-            options={SCAN_TYPES}
+            options={SCAN_TYPE_OPTIONS.map(type => ({
+              label: type,
+              value: type,
+            }))}
             value={scanType}
             onValueChange={handleScanTypeChange}
           />

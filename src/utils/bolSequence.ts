@@ -5,7 +5,10 @@ const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Extracts the trailing _N sequence number from a BOL-based filename.
 // Returns null if the filename does not match the {BOL}_{N}.ext pattern.
-export const extractBolSequence = (bol: string, fileName: string): number | null => {
+export const extractBolSequence = (
+  bol: string,
+  fileName: string,
+): number | null => {
   const regex = new RegExp(`^${escapeRegex(bol)}_(\\d+)\\.[^.]+$`);
   const match = fileName.match(regex);
   return match ? parseInt(match[1], 10) : null;
@@ -64,7 +67,7 @@ export const assignBolFileNames = async (
 
   const renamedPhotos = photos.map(photo => {
     max += 1;
-    const ext = photo.fileName?.match(/(\.[^.]+)$/)?.[1] ?? '.png';
+    const ext = photo.fileName?.match(/(\.[^.]+)$/)?.[1] ?? '.jpg';
     return { ...photo, fileName: `${bol}_${max}${ext}` };
   });
 

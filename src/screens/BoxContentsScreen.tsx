@@ -64,7 +64,7 @@ const BoxContentsScreen: React.FC<{
               color={COLORS.white}
               weight="bold"
             >
-              {`${items.length} Item`}
+              {`${items.length} ${items.length > 1 ? 'Items' : 'Item'}`}
             </CustomText>
           </View>
         </View>
@@ -82,17 +82,12 @@ const BoxContentsScreen: React.FC<{
                 >
                   {item.name}
                 </CustomText>
-                <CustomText
-                  size={FontSize.smallText}
-                  color={COLORS.greyText}
-                >
+                <CustomText size={FontSize.smallText} color={COLORS.greyText}>
                   {`Qty - ${item.qty}`}
                 </CustomText>
               </View>
 
-              {index < items.length - 1 && (
-                <View style={styles.rowDivider} />
-              )}
+              {index < items.length - 1 && <View style={styles.rowDivider} />}
             </React.Fragment>
           ))}
         </ScrollView>

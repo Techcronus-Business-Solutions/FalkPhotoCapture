@@ -341,7 +341,7 @@ const EditBoxScreen: React.FC<{
                 color={COLORS.white}
                 weight="bold"
               >
-                {`${items.length} Item`}
+                {`${items.length} ${items.length > 1 ? 'Items' : 'Item'}`}
               </CustomText>
             </View>
           </View>
@@ -447,7 +447,9 @@ const EditBoxScreen: React.FC<{
       <AvailableItemsModal
         visible={showAvailableItems}
         items={availableItemsWithReturnedQuantity.filter(
-          availableItem => !items.some(item => item.id === availableItem.id),
+          availableItem =>
+            availableItem.availableQuantity > 0 &&
+            !items.some(item => item.id === availableItem.id),
         )}
         onCancel={() => setShowAvailableItems(false)}
         onSelect={handleSelectAvailableItem}

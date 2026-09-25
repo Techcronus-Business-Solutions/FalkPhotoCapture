@@ -298,7 +298,7 @@ const AddBoxScreen: React.FC<{
                 color={COLORS.white}
                 weight="bold"
               >
-                {`${items.length} Items`}
+                {`${items.length} ${items.length > 1 ? 'Items' : 'Item'}`}
               </CustomText>
             </View>
           </View>
@@ -385,7 +385,9 @@ const AddBoxScreen: React.FC<{
       <AvailableItemsModal
         visible={showAvailableItems}
         items={availableItems.filter(
-          availableItem => !items.some(item => item.id === availableItem.id),
+          availableItem =>
+            availableItem.availableQuantity > 0 &&
+            !items.some(item => item.id === availableItem.id),
         )}
         onCancel={() => setShowAvailableItems(false)}
         onSelect={handleSelectAvailableItem}

@@ -551,6 +551,7 @@ const ShippingManagementScreen: React.FC<{
         } else {
           const res = await fetchTrimBoxWithDetails(orderNumber);
           resolvedOrderExists = res.orderExists;
+          resolvedShipmentData = res.shipmentData;
           resolvedTrimBoxList = res.trimBoxList;
         }
       }
@@ -569,6 +570,7 @@ const ShippingManagementScreen: React.FC<{
             : orderNumber,
         panelCurrentStatus: resolvedPanelData?.status ?? '',
         panelLastScanType: resolvedPanelData?.lastScanType ?? '',
+        paymentStatus: resolvedShipmentData?.paymentStatus ?? '',
         trimBoxStatuses: resolvedTrimBoxList.map(b => ({
           boxNumber: b.boxNumber,
           status: b.status,

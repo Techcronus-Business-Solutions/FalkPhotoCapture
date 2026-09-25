@@ -49,7 +49,7 @@ const checkLibraryPermission = async (): Promise<boolean> => {
   return true;
 };
 
-const convertToPngBase64 = async (
+const convertToJpegBase64 = async (
   uri: string,
   width?: number,
   height?: number,
@@ -60,8 +60,8 @@ const convertToPngBase64 = async (
     uri,
     targetWidth,
     targetHeight,
-    'PNG',
-    100,
+    'JPEG',
+    85,
   );
   const base64 = await RNFS.readFile(resized.uri, 'base64');
   return { uri: resized.uri, base64 };
@@ -71,18 +71,20 @@ const assetToPhotoItem = async (asset: Asset): Promise<PhotoItem> => {
   const id = generateId();
   const sourceUri = asset.uri ?? '';
 
-  const converted = await convertToPngBase64(sourceUri, 1080, 1920);
+  const converted = await convertToJpegBase64(sourceUri, 1080, 1920);
 
   const fileName = asset.fileName
-    ? asset.fileName.replace(/\.[^.]+$/, '.png')
-    : `${id}.png`;
+    ? /\.[^.]+$/.test(asset.fileName)
+      ? asset.fileName.replace(/\.[^.]+$/, '.jpg')
+      : `${asset.fileName}.jpg`
+    : `${id}.jpg`;
 
   return {
     id,
     uri: converted.uri,
     fileName,
     fileSize: asset.fileSize,
-    type: 'image/png',
+    type: 'image/jpeg',
     base64: converted.base64,
   };
 };

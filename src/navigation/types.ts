@@ -98,6 +98,7 @@ export type RootStackParamList = {
     orderNumber: string;
     panelCurrentStatus: string;
     panelLastScanType: string;
+    paymentStatus?: string;
     trimBoxStatuses: {
       boxNumber: number;
       status: string;
