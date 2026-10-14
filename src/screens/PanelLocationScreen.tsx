@@ -21,7 +21,7 @@ const getPanelStatusColor = (status: string): string => {
   switch (status) {
     case 'Shipped':
       return COLORS.uploaded;
-    case 'QA Hold':
+    case 'On Hold':
       return COLORS.failed;
     case 'Active':
       return COLORS.orange;
@@ -32,7 +32,7 @@ const getPanelStatusColor = (status: string): string => {
 
 const getLocationDisplay = (item: PanelLocationItem): string => {
   if (item.status === 'Shipped') return 'Shipped';
-  if (item.status === 'QA Hold')
+  if (item.status === 'On Hold')
     return item.holdLocation || item.currentLocation;
   return item.currentLocation;
 };

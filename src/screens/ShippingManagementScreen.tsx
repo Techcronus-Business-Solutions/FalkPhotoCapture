@@ -107,7 +107,7 @@ const getLocationDisplay = (
 };
 
 const getBoxLocation = (box: TrimBox): string =>
-  box.status === 'QA Hold' ? box.holdLocation : box.currentLocation;
+  box.status === 'On Hold' ? box.holdLocation : box.currentLocation;
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -240,7 +240,7 @@ const ShippingManagementScreen: React.FC<{
         if (statusJson.success && statusJson.data) {
           const pd = statusJson.data as PanelData;
           const pStatus: PanelStatus =
-            pd.status === 'QA Hold' ? 'hold' : 'active';
+            pd.status === 'On Hold' ? 'hold' : 'active';
           setPanelData(pd);
           setPanelStatus(pStatus);
           return {
@@ -339,7 +339,7 @@ const ShippingManagementScreen: React.FC<{
           const sorted = [...(statusJson.data as TrimBox[])].sort(
             (a, b) => a.boxNumber - b.boxNumber,
           );
-          const hasHold = sorted.some(b => b.status === 'QA Hold');
+          const hasHold = sorted.some(b => b.status === 'On Hold');
           const tbStatus: TrimBoxStatus = hasHold ? 'partial-hold' : 'active';
           setTrimBoxList(sorted);
           setTrimBoxStatus(tbStatus);
@@ -442,7 +442,7 @@ const ShippingManagementScreen: React.FC<{
             modified: new Date().toISOString(),
           };
           if (result.scanType === 'QA Hold') {
-            updated.status = 'QA Hold';
+            updated.status = 'On Hold';
             updated.holdLocation = result.holdLocation;
           } else if (result.scanType === 'Load') {
             updated.status = 'Loaded';
@@ -487,7 +487,7 @@ const ShippingManagementScreen: React.FC<{
           if (b.boxNumber !== boxNum) return b;
           const u: TrimBox = { ...b, lastScanType: result.scanType };
           if (result.scanType === 'QA Hold') {
-            u.status = 'QA Hold';
+            u.status = 'On Hold';
             u.holdLocation = result.holdLocation;
           } else if (result.scanType === 'Load') {
             u.status = 'Loaded';
@@ -510,7 +510,7 @@ const ShippingManagementScreen: React.FC<{
         });
 
         setTrimBoxList(updatedList);
-        const hasHold = updatedList.some(b => b.status === 'QA Hold');
+        const hasHold = updatedList.some(b => b.status === 'On Hold');
         setTrimBoxStatus(hasHold ? 'partial-hold' : 'active');
       }
     },

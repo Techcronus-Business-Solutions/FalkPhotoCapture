@@ -220,14 +220,14 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
 
     if (
       entityType === 'Panel' &&
-      panelCurrentStatus === 'QA Hold' &&
+      panelCurrentStatus === 'On Hold' &&
       scanType !== 'Release Hold'
     ) {
       Toast.show({
         type: 'error',
         text1: 'Validation Error',
         text2:
-          'This panel is currently on QA Hold. Please select "Release Hold" as the Scan Type.',
+          'This panel is currently on On Hold. Please select "Release Hold" as the Scan Type.',
       });
       return;
     }
@@ -236,12 +236,12 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
       const matchedBox = trimBoxStatuses.find(
         b => b.boxNumber === Number(boxNumber),
       );
-      if (matchedBox?.status === 'QA Hold' && scanType !== 'Release Hold') {
+      if (matchedBox?.status === 'On Hold' && scanType !== 'Release Hold') {
         Toast.show({
           type: 'error',
           text1: 'Validation Error',
           text2:
-            'This Trim Box is currently on QA Hold. Please select "Release Hold" as the Scan Type.',
+            'This Trim Box is currently on On Hold. Please select "Release Hold" as the Scan Type.',
         });
         return;
       }

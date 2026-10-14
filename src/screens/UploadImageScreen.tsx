@@ -51,6 +51,8 @@ const UploadImageScreen: React.FC<{
   const [uploading, setUploading] = useState(false);
   const uploadingRef = useRef(false);
   const [selectingPhotos, setSelectingPhotos] = useState(false);
+  const selectingPhotosRef = useRef(false);
+  const [pendingUploadsLoaded, setPendingUploadsLoaded] = useState(false);
   const [deleteImageModalVisible, setDeleteImageModalVisible] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
@@ -100,9 +102,14 @@ const UploadImageScreen: React.FC<{
     [pendingUploads],
   );
 
-  const displayedPhotos = useMemo(
-    () => [...serverPhotos, ...pendingPhotos, ...photos],
-    [serverPhotos, pendingPhotos, photos],
+  const uploadedPhotos = serverPhotos;
+  const selectedPhotos = useMemo(
+    () => [...pendingPhotos, ...photos],
+    [pendingPhotos, photos],
+  );
+  const remainingCapacity = Math.max(
+    0,
+    MAX_PHOTOS - uploadedPhotos.length,
   );
 
   const photosCountRef = useRef(photos.length);
@@ -112,12 +119,31 @@ const UploadImageScreen: React.FC<{
   }, [photos.length]);
 
   useEffect(() => {
+    let isMounted = true;
     usePendingUploadsStore
       .getState()
       .loadPendingUploads()
-      .catch(() => {
-        /* ignore pending upload hydration errors */
+      .then(() => {
+        if (isMounted) {
+          setPendingUploadsLoaded(true);
+        }
+      })
+      .catch((err: unknown) => {
+        if (isMounted) {
+          Toast.show({
+            type: 'error',
+            text1: 'Saved Photos Unavailable',
+            text2:
+              err instanceof Error
+                ? err.message
+                : 'Unable to load pending photos. Please reopen this screen.',
+          });
+        }
       });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -172,7 +198,19 @@ const UploadImageScreen: React.FC<{
 
   const handleAddPhoto = useCallback(
     async (source: 'camera' | 'gallery') => {
-      if (displayedPhotos.length >= MAX_PHOTOS) {
+      if (!pendingUploadsLoaded) {
+        Toast.show({
+          type: 'info',
+          text1: 'Please Wait',
+          text2: 'Saved photos are still loading.',
+        });
+        return;
+      }
+      if (selectingPhotosRef.current) {
+        return;
+      }
+      const selectionLimit = remainingCapacity - selectedPhotos.length;
+      if (selectionLimit < 1) {
         Toast.show({
           type: 'error',
           text1: 'Limit Reached',
@@ -181,6 +219,7 @@ const UploadImageScreen: React.FC<{
         return;
       }
       try {
+        selectingPhotosRef.current = true;
         setSelectingPhotos(true);
         if (source === 'camera') {
           const photo = await takePhoto();
@@ -189,20 +228,21 @@ const UploadImageScreen: React.FC<{
             await addPhoto(shipmentId, renamed);
           }
         } else {
-          const selectedPhotos = await pickFromGallery(
-            MAX_PHOTOS - displayedPhotos.length,
-          );
-          if (selectedPhotos?.length) {
-            const renamed = await applyBolFileNames(selectedPhotos);
+          const newlySelectedPhotos = await pickFromGallery(selectionLimit);
+          if (newlySelectedPhotos?.length) {
+            const renamed = await applyBolFileNames(newlySelectedPhotos);
             await addPhotos(shipmentId, renamed);
           }
         }
       } finally {
+        selectingPhotosRef.current = false;
         setSelectingPhotos(false);
       }
     },
     [
-      displayedPhotos.length,
+      remainingCapacity,
+      selectedPhotos.length,
+      pendingUploadsLoaded,
       takePhoto,
       pickFromGallery,
       addPhoto,
@@ -249,6 +289,15 @@ const UploadImageScreen: React.FC<{
         type: 'error',
         text1: 'No Photos',
         text2: 'Please add at least one photo before uploading.',
+      });
+      return;
+    }
+
+    if (uploadedPhotos.length + selectedPhotos.length > MAX_PHOTOS) {
+      Toast.show({
+        type: 'error',
+        text1: 'Limit Reached',
+        text2: `An order can contain up to ${MAX_PHOTOS} photos.`,
       });
       return;
     }
@@ -324,6 +373,8 @@ const UploadImageScreen: React.FC<{
     }
   }, [
     photos,
+    uploadedPhotos.length,
+    selectedPhotos.length,
     pendingUploads,
     orderNumber,
     shipmentId,
@@ -447,6 +498,7 @@ const UploadImageScreen: React.FC<{
             <TouchableOpacity
               style={styles.optionCard}
               onPress={() => handleAddPhoto('camera')}
+              disabled={!pendingUploadsLoaded}
               activeOpacity={0.7}
             >
               <Ionicons
@@ -472,6 +524,7 @@ const UploadImageScreen: React.FC<{
             <TouchableOpacity
               style={styles.optionCard}
               onPress={() => handleAddPhoto('gallery')}
+              disabled={!pendingUploadsLoaded}
               activeOpacity={0.7}
             >
               <Ionicons
@@ -496,56 +549,77 @@ const UploadImageScreen: React.FC<{
           </View>
         </View>
 
-        {/* Selected Photos */}
-        <View style={styles.section}>
-          <CustomText
-            size={FontSize.normalText}
-            color={COLORS.black}
-            style={styles.sectionTitle}
-          >
-            Selected Photos ({displayedPhotos.length}/{MAX_PHOTOS})
-          </CustomText>
-
-          {displayedPhotos.length > 0 ? (
+        {uploadedPhotos.length > 0 && (
+          <View style={styles.section}>
+            <CustomText
+              size={FontSize.normalText}
+              color={COLORS.black}
+              style={styles.sectionTitle}
+            >
+              Uploaded Photos
+            </CustomText>
             <FlatList
-              data={displayedPhotos}
+              data={uploadedPhotos}
               renderItem={renderPhoto}
               keyExtractor={item => item.id}
               numColumns={3}
               scrollEnabled={false}
               contentContainerStyle={styles.photoGrid}
             />
-          ) : (
-            <View style={styles.emptyPhotos}>
-              <Ionicons
-                name="image-outline"
-                size={wp(10)}
-                color={COLORS.greyText}
-              />
-              <CustomText
-                size={FontSize.normalText}
-                color={COLORS.greyText}
-                style={styles.emptyText}
-              >
-                No photos selected yet.
-              </CustomText>
-            </View>
-          )}
+          </View>
+        )}
 
-          <CustomText
-            size={FontSize.smallMediumText}
-            color={COLORS.greyText}
-            style={styles.hint}
-          >
-            You can add up to {MAX_PHOTOS} photos.
-          </CustomText>
-        </View>
+        {remainingCapacity > 0 && (
+          <View style={styles.section}>
+            <CustomText
+              size={FontSize.normalText}
+              color={COLORS.black}
+              style={styles.sectionTitle}
+            >
+              Selected Photos ({selectedPhotos.length}/{remainingCapacity})
+            </CustomText>
+
+            {selectedPhotos.length > 0 ? (
+              <FlatList
+                data={selectedPhotos}
+                renderItem={renderPhoto}
+                keyExtractor={item => item.id}
+                numColumns={3}
+                scrollEnabled={false}
+                contentContainerStyle={styles.photoGrid}
+              />
+            ) : (
+              <View style={styles.emptyPhotos}>
+                <Ionicons
+                  name="image-outline"
+                  size={wp(10)}
+                  color={COLORS.greyText}
+                />
+                <CustomText
+                  size={FontSize.normalText}
+                  color={COLORS.greyText}
+                  style={styles.emptyText}
+                >
+                  No photos selected yet.
+                </CustomText>
+              </View>
+            )}
+
+            <CustomText
+              size={FontSize.smallMediumText}
+              color={COLORS.greyText}
+              style={styles.hint}
+            >
+              You can add up to {remainingCapacity} more photos.
+            </CustomText>
+          </View>
+        )}
 
         <CustomButton
           title="  Upload"
           onPress={handleUpload}
           loading={uploading}
-          disabled={!displayedPhotos.length || uploading}
+          disabled={!selectedPhotos.length || uploading}
           style={styles.uploadBtn}
         />
       </ScrollView>

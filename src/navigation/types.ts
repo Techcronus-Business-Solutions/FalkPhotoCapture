@@ -125,7 +125,7 @@ export type RootStackParamList = {
   };
   EditBox: {
     orderNumber: string;
-    box: BoxDetailItem;
+    box: Pick<BoxDetailItem, 'boxNumber'>;
   };
 };
 

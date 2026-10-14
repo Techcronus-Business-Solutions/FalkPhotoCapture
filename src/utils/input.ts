@@ -13,7 +13,11 @@ export const displayValue = (
   }
 
   if (typeof value === 'string') {
-    if (value.trim() === '') {
+    if (
+      value.trim() === '' ||
+      value.trim() === ',,' ||
+      value.trim() === ', ,'
+    ) {
       return '-';
     }
 

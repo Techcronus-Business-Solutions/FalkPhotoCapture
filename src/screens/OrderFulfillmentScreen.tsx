@@ -236,12 +236,19 @@ const CsvCard: React.FC<{ item: Panel; onPress: () => void }> = ({
 
 // ─── TrimBoxCard ─────────────────────────────────────────────────────────────
 
-const TrimBoxCard: React.FC<{ item: TrimBox }> = ({ item }) => {
+const TrimBoxCard: React.FC<{
+  item: TrimBox;
+  onPress: () => void;
+}> = ({ item, onPress }) => {
   const statusColor = getTrimBoxStatusColor(item.status);
   const location = getTrimBoxLocation(item);
 
   return (
-    <View style={styles.trimBoxCard}>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={onPress}
+      style={styles.trimBoxCard}
+    >
       {/* Left */}
       <View style={styles.trimLeftSection}>
         <Ionicons name="cube" size={wp(6)} color={statusColor} />
@@ -288,7 +295,7 @@ const TrimBoxCard: React.FC<{ item: TrimBox }> = ({ item }) => {
           </CustomText>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -497,7 +504,16 @@ const OrderFulfillmentScreen: React.FC<{
             </CustomText>
 
             {trimBoxes.map(item => (
-              <TrimBoxCard key={item.boxNumber} item={item} />
+              <TrimBoxCard
+                key={item.boxNumber}
+                item={item}
+                onPress={() =>
+                  navigation.navigate('EditBox', {
+                    orderNumber,
+                    box: { boxNumber: item.boxNumber },
+                  })
+                }
+              />
             ))}
           </>
         )}
