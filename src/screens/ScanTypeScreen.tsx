@@ -227,7 +227,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
         type: 'error',
         text1: 'Validation Error',
         text2:
-          'This panel is currently on On Hold. Please select "Release Hold" as the Scan Type.',
+          'This Panel is currently on On Hold',
       });
       return;
     }
@@ -241,7 +241,7 @@ const ScanTypeScreen: React.FC<ScanTypeScreenProps> = ({
           type: 'error',
           text1: 'Validation Error',
           text2:
-            'This Trim Box is currently on On Hold. Please select "Release Hold" as the Scan Type.',
+            'This Trim Box is currently on On Hold',
         });
         return;
       }

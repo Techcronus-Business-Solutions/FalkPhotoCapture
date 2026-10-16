@@ -21,7 +21,9 @@ const mapToAddBoxItem = (item: BendexAssignmentItem): AddBoxItem => {
     position: String(item.position),
     description:
       item.length !== 0 && item.width !== 0
-        ? `${item.color}\n${item.length} in x ${item.width} in`
+        ? `${item.color}\n${(item.length / 25.4).toFixed(2)} in x ${(
+            item.width / 25.4
+          ).toFixed(2)} in`
         : item.color,
     quantity: assignedQuantity,
     availableQuantity: totalQuantity,
